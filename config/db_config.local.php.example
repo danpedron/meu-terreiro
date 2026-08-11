@@ -1,0 +1,6 @@
+<?php
+/**
+ * Copie este arquivo para config/db_config.local.php e preencha somente no
+ * ambiente local ou no servidor. Nunca faça commit do arquivo preenchido.
+ */
+define('MEUTERREIRO_LOCAL_DB_PASS', 'substitua-por-uma-senha-forte');

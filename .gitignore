@@ -1,0 +1,3 @@
+config/db_config.local.php
+public/*.bak-*
+*.log

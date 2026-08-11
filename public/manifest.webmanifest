@@ -1,0 +1,10 @@
+{
+  "name": "Meu Terreiro",
+  "short_name": "Terreiro",
+  "description": "Administração simples e respeitosa para terreiros e comunidades de axé.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6efe5",
+  "theme_color": "#6b3f2a",
+  "lang": "pt-BR"
+}
