@@ -2,7 +2,7 @@
 
 Plataforma administrativa web para organização de terreiros de Umbanda e comunidades afro-brasileiras. O projeto foi pensado para ser simples o suficiente para o uso cotidiano por dirigentes, regentes, secretários e pessoas mais velhas, sem abrir mão de uma base técnica preparada para evolução enterprise.
 
-> **Estado atual:** plataforma funcional em evolução. O repositório contém onboarding de novos terreiros, isolamento por banco, autenticação por perfis, dashboard, cadastros operacionais, agenda, obrigações, financeiro, estoque, compras, patrimônio, biblioteca, álbum de memória, locais de referência e registros internos de segurança. Exportação e importação portátil de dados continuam no roadmap.
+> **Estado atual:** plataforma funcional em evolução. O repositório contém onboarding de novos terreiros, isolamento por banco, autenticação por perfis, dashboard, cadastros operacionais, agenda, obrigações, financeiro, estoque, compras, patrimônio, biblioteca, álbum de memória, locais de referência, registros internos de segurança e portabilidade autorizada de dados pessoais entre casas.
 
 ## Visão do projeto
 
@@ -24,7 +24,7 @@ O sistema foi desenhado com uma linguagem visual inspirada em referências afro-
 | Memória e estudo | Biblioteca, materiais em nuvem, álbum de fotos com consentimento de imagem e patrimônio da casa. |
 | Locais e cuidado | Referências privadas para folhas, ervas, encruzilhadas e outros locais, com condição de acesso e restrição padrão. |
 | Segurança | Registro sigiloso de ocorrências, providências e contatos de apoio. |
-| Exportação | Exportação controlada dos dados do próprio filho para importação em outro terreiro, mediante autorização; planejada para próxima etapa. |
+| Portabilidade | Exportação em JSON e importação controlada de cadastro, entidades e histórico de obrigações do próprio filho, com confirmação explícita, auditoria e isolamento entre bancos. |
 
 ## Arquitetura multi-tenant
 
@@ -201,7 +201,7 @@ Toda alteração deste projeto deve ser registrada em um commit que explique o q
 
 ## Roadmap
 
-As próximas etapas priorizam exportação e importação autorizada dos dados de um filho de santo, relatórios financeiros, backups verificáveis, permissões ainda mais granulares, participação em agenda, anexos em armazenamento privado e testes automatizados. Cada melhoria deve preservar a separação entre terreiros, o uso em dispositivos móveis e a autonomia espiritual de cada casa.
+As próximas etapas priorizam relatórios financeiros, backups verificáveis, permissões ainda mais granulares, participação em agenda, anexos em armazenamento privado, restauração de dados e testes automatizados. Cada melhoria deve preservar a separação entre terreiros, o uso em dispositivos móveis e a autonomia espiritual de cada casa.
 
 ## Licença
 
