@@ -75,3 +75,20 @@ textarea.form-control { min-height: 7.5rem; }
 @media (max-width: 767.98px) { body { padding-bottom: 5rem; } .mobile-nav { display: flex; } .mt-access-card { border-radius: 1rem; } .mt-access-intro { min-height: auto; } .display-6 { font-size: 2rem; } .table { font-size: .9rem; } }
 @media (min-width: 768px) { .container { max-width: 1160px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+
+/* Acessibilidade e uso confortável em telas pequenas. */
+.mt-skip-link { position: fixed; z-index: 2000; top: .75rem; left: .75rem; padding: .7rem 1rem; color: #fff; background: var(--mt-terra-escura); border-radius: .6rem; box-shadow: 0 .35rem .9rem rgba(40, 24, 16, .25); text-decoration: none; transform: translateY(-180%); transition: transform .15s ease; }
+.mt-skip-link:focus { color: #fff; transform: translateY(0); }
+#conteudo-principal:focus { outline: none; }
+.table-responsive { scrollbar-color: var(--mt-dourado) var(--mt-areia); }
+@media (max-width: 767.98px) {
+  .mt-navbar .navbar-brand { font-size: 1rem; }
+  .mt-navbar .navbar-toggler { min-width: 2.9rem; min-height: 2.9rem; }
+  .mobile-nav a { min-height: 2.85rem; justify-content: center; }
+  .mobile-nav span { line-height: 1.1; }
+  .card { border-radius: .85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-skip-link { transition: none; }
+}

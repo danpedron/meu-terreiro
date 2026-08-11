@@ -46,7 +46,8 @@ unset($_SESSION['register_old']);
     <link href="assets/css/app.css" rel="stylesheet">
 </head>
 <body>
-<?php if (!isset($_SESSION['user_id'])): ?>
+<a class="mt-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+	<?php if (!isset($_SESSION['user_id'])): ?>
     <main class="mt-login-shell">
         <div class="container py-4 py-md-5">
             <div class="row justify-content-center">
@@ -120,7 +121,7 @@ unset($_SESSION['register_old']);
             </div>
         </div>
     </nav>
-    <main class="container pb-5">
+    <main id="conteudo-principal" class="container pb-5" tabindex="-1">
         <?php
         if ($page === 'dashboard') {
             include __DIR__ . '/../modules/dashboard.php';
