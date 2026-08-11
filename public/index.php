@@ -13,7 +13,7 @@ function e(?string $value): string { return htmlspecialchars($value ?? '', ENT_Q
 $publicPages = ['login', 'register'];
 $resourcePages = ['filhos','agenda','obrigacoes_tipo','registros_obrigacoes','entidades','mensalidades','financeiro','estoque','movimentacoes_estoque','fornecedores','compras','preparos','oferendas','tarefas','patrimonio','biblioteca','album','locais','comunicados','incidentes'];
 $page = $_GET['p'] ?? (isset($_SESSION['user_id']) ? 'dashboard' : 'login');
-if (!in_array($page, array_merge($publicPages, $resourcePages, ['dashboard', 'configuracoes']), true)) {
+if (!in_array($page, array_merge($publicPages, $resourcePages, ['dashboard', 'configuracoes', 'portabilidade']), true)) {
     $page = isset($_SESSION['user_id']) ? 'dashboard' : 'login';
 }
 if (isset($_SESSION['user_id']) && in_array($page, $publicPages, true)) {
@@ -111,7 +111,7 @@ unset($_SESSION['register_old']);
             <div class="collapse navbar-collapse" id="mainNav">
                 <ul class="navbar-nav ms-auto align-items-xl-center gap-xl-1">
                     <li class="nav-item"><a class="nav-link" href="?p=dashboard"><i class="fa-solid fa-house me-1"></i>Início</a></li><li class="nav-item"><a class="nav-link" href="?p=configuracoes"><i class="fa-solid fa-gear me-1"></i>Casa</a></li>
-                    <li class="nav-item dropdown"><a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Pessoas</a><ul class="dropdown-menu"><li><a class="dropdown-item" href="?p=filhos">Filhos de santo</a></li><li><a class="dropdown-item" href="?p=entidades">Entidades</a></li><li><a class="dropdown-item" href="?p=obrigacoes_tipo">Tipos de obrigações</a></li><li><a class="dropdown-item" href="?p=registros_obrigacoes">Histórico de obrigações</a></li></ul></li>
+                    <li class="nav-item dropdown"><a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Pessoas</a><ul class="dropdown-menu"><li><a class="dropdown-item" href="?p=filhos">Filhos de santo</a></li><li><a class="dropdown-item" href="?p=entidades">Entidades</a></li><li><a class="dropdown-item" href="?p=obrigacoes_tipo">Tipos de obrigações</a></li><li><a class="dropdown-item" href="?p=registros_obrigacoes">Histórico de obrigações</a></li><li><hr class="dropdown-divider"></li><li><a class="dropdown-item" href="?p=portabilidade">Portabilidade de dados</a></li></ul></li>
                     <li class="nav-item dropdown"><a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Rotina</a><ul class="dropdown-menu"><li><a class="dropdown-item" href="?p=agenda">Agenda</a></li><li><a class="dropdown-item" href="?p=tarefas">Tarefas da casa</a></li><li><a class="dropdown-item" href="?p=comunicados">Comunicados</a></li><li><a class="dropdown-item" href="?p=preparos">Cozinha e preparos</a></li><li><a class="dropdown-item" href="?p=oferendas">Registros de oferendas</a></li></ul></li>
                     <li class="nav-item dropdown"><a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Gestão</a><ul class="dropdown-menu"><li><a class="dropdown-item" href="?p=financeiro">Financeiro</a></li><li><a class="dropdown-item" href="?p=mensalidades">Mensalidades</a></li><li><a class="dropdown-item" href="?p=estoque">Estoque</a></li><li><a class="dropdown-item" href="?p=movimentacoes_estoque">Movimentações</a></li><li><a class="dropdown-item" href="?p=compras">Compras</a></li><li><a class="dropdown-item" href="?p=fornecedores">Fornecedores</a></li><li><a class="dropdown-item" href="?p=patrimonio">Patrimônio</a></li></ul></li>
                     <li class="nav-item dropdown"><a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Memória e cuidado</a><ul class="dropdown-menu"><li><a class="dropdown-item" href="?p=biblioteca">Biblioteca</a></li><li><a class="dropdown-item" href="?p=album">Álbum de memória</a></li><li><a class="dropdown-item" href="?p=locais">Locais e referências</a></li><li><a class="dropdown-item" href="?p=incidentes">Segurança e ocorrências</a></li></ul></li>
@@ -126,6 +126,8 @@ unset($_SESSION['register_old']);
             include __DIR__ . '/../modules/dashboard.php';
         } elseif ($page === 'configuracoes') {
             include __DIR__ . '/../modules/configuracoes.php';
+        } elseif ($page === 'portabilidade') {
+            include __DIR__ . '/../modules/portabilidade.php';
         } elseif (in_array($page, $resourcePages, true)) {
             $resourceKey = $page;
             include __DIR__ . '/../modules/resource.php';
