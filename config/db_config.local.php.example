@@ -3,4 +3,12 @@
  * Copie este arquivo para config/db_config.local.php e preencha somente no
  * ambiente local ou no servidor. Nunca faça commit do arquivo preenchido.
  */
-define('MEUTERREIRO_LOCAL_DB_PASS', 'substitua-por-uma-senha-forte');
+define('MEUTERREIRO_LOCAL_DB_PASS', 'substitua-pela-senha-da-aplicacao');
+
+/**
+ * Conta exclusiva de onboarding: cria bancos de novos terreiros e não deve ser
+ * usada pela operação diária. Conceda apenas CREATE global e privilégios sobre
+ * bancos com o prefixo meuterreiro_.
+ */
+define('MEUTERREIRO_PROVISIONER_LOCAL_DB_USER', 'meuterreiro_provisioner');
+define('MEUTERREIRO_PROVISIONER_LOCAL_DB_PASS', 'substitua-pela-senha-do-provisionador');

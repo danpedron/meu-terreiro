@@ -1,20 +1,4 @@
--- Esquema base isolado por terreiro.
--- Cada banco pertence exclusivamente a uma casa. Registros rituais, fotos, locais e
--- informações pessoais devem ser configurados como restritos por padrão.
-
-CREATE TABLE IF NOT EXISTS terreiro_info (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(255) NOT NULL,
-    fundacao DATE NULL,
-    nacao VARCHAR(100) NULL,
-    latitude DECIMAL(10,8) NULL,
-    longitude DECIMAL(11,8) NULL,
-    babalorixa VARCHAR(255) NULL,
-    yalorixa VARCHAR(255) NULL,
-    mensalidade_valor DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
+-- === TENANT (executar após selecionar o banco isolado do terreiro) ===
 CREATE TABLE IF NOT EXISTS terreiro_detalhes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     descricao TEXT NULL,
@@ -25,19 +9,6 @@ CREATE TABLE IF NOT EXISTS terreiro_detalhes (
     endereco_publico TEXT NULL,
     politica_privacidade TEXT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS filhos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(255) NOT NULL,
-    cpf VARCHAR(14) UNIQUE NULL,
-    data_nascimento DATE NULL,
-    whatsapp VARCHAR(20) NULL,
-    endereco TEXT NULL,
-    data_entrada DATE NULL,
-    cargo VARCHAR(100) NULL,
-    status ENUM('Ativo', 'Inativo', 'Afastado') NOT NULL DEFAULT 'Ativo',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS consentimentos (
@@ -51,53 +22,29 @@ CREATE TABLE IF NOT EXISTS consentimentos (
     INDEX idx_consentimentos_filho (id_filho, tipo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS entidades (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    id_filho INT NOT NULL,
-    nome VARCHAR(255) NOT NULL,
-    tipo VARCHAR(100) NULL,
-    cor_vela VARCHAR(50) NULL,
-    ponto_riscado_url TEXT NULL,
-    recados TEXT NULL,
-    nivel_sigilo ENUM('Restrito','Dirigência') NOT NULL DEFAULT 'Restrito',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_filho) REFERENCES filhos(id) ON DELETE CASCADE,
-    INDEX idx_entidades_filho (id_filho)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE entidades
+    ADD COLUMN IF NOT EXISTS nivel_sigilo ENUM('Restrito','Dirigência') NOT NULL DEFAULT 'Restrito' AFTER recados,
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER nivel_sigilo;
 
-CREATE TABLE IF NOT EXISTS obrigacoes_tipo (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(255) NOT NULL,
-    descricao TEXT NULL,
-    nivel_sigilo ENUM('Interno','Restrito','Dirigência') NOT NULL DEFAULT 'Restrito',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE obrigacoes_tipo
+    ADD COLUMN IF NOT EXISTS nivel_sigilo ENUM('Interno','Restrito','Dirigência') NOT NULL DEFAULT 'Restrito' AFTER descricao,
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER nivel_sigilo;
 
-CREATE TABLE IF NOT EXISTS filhos_obrigacoes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    id_filho INT NOT NULL,
-    id_obrigacao INT NOT NULL,
-    data_realizacao DATE NOT NULL,
-    observacoes TEXT NULL,
-    registrado_por INT NULL,
-    FOREIGN KEY (id_filho) REFERENCES filhos(id) ON DELETE CASCADE,
-    FOREIGN KEY (id_obrigacao) REFERENCES obrigacoes_tipo(id),
-    INDEX idx_obrigacoes_filho_data (id_filho, data_realizacao)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE filhos_obrigacoes
+    ADD COLUMN IF NOT EXISTS registrado_por INT NULL AFTER observacoes;
 
-CREATE TABLE IF NOT EXISTS agenda (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    titulo VARCHAR(255) NOT NULL,
-    descricao TEXT NULL,
-    data_hora DATETIME NOT NULL,
-    tipo ENUM('Gira', 'Obrigação', 'Festa', 'Reunião', 'Estudo', 'Ação social', 'Manutenção') NOT NULL DEFAULT 'Gira',
-    local_evento VARCHAR(255) NULL,
-    status ENUM('Planejado','Confirmado','Concluído','Cancelado') NOT NULL DEFAULT 'Planejado',
-    visibilidade ENUM('Interno','Restrito','Dirigência') NOT NULL DEFAULT 'Interno',
-    capacidade INT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_agenda_data (data_hora)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE agenda
+    MODIFY COLUMN tipo ENUM('Gira','Obrigação','Festa','Reunião','Estudo','Ação social','Manutenção') NOT NULL DEFAULT 'Gira',
+    ADD COLUMN IF NOT EXISTS local_evento VARCHAR(255) NULL AFTER tipo,
+    ADD COLUMN IF NOT EXISTS status ENUM('Planejado','Confirmado','Concluído','Cancelado') NOT NULL DEFAULT 'Planejado' AFTER local_evento,
+    ADD COLUMN IF NOT EXISTS visibilidade ENUM('Interno','Restrito','Dirigência') NOT NULL DEFAULT 'Interno' AFTER status,
+    ADD COLUMN IF NOT EXISTS capacidade INT NULL AFTER visibilidade;
+
+ALTER TABLE mensalidades
+    ADD COLUMN IF NOT EXISTS meio_pagamento VARCHAR(60) NULL AFTER data_pagamento;
+
+ALTER TABLE biblioteca
+    ADD COLUMN IF NOT EXISTS visibilidade ENUM('Interno','Restrito','Dirigência') NOT NULL DEFAULT 'Interno' AFTER categoria;
 
 CREATE TABLE IF NOT EXISTS agenda_participantes (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -108,18 +55,6 @@ CREATE TABLE IF NOT EXISTS agenda_participantes (
     FOREIGN KEY (id_agenda) REFERENCES agenda(id) ON DELETE CASCADE,
     FOREIGN KEY (id_filho) REFERENCES filhos(id) ON DELETE CASCADE,
     UNIQUE KEY uq_agenda_participante (id_agenda, id_filho)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS mensalidades (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    id_filho INT NOT NULL,
-    referencia_mes_ano CHAR(7) NOT NULL,
-    valor_pago DECIMAL(10,2) NOT NULL,
-    data_pagamento DATE NOT NULL,
-    meio_pagamento VARCHAR(60) NULL,
-    registrado_por VARCHAR(100) NULL,
-    FOREIGN KEY (id_filho) REFERENCES filhos(id) ON DELETE CASCADE,
-    INDEX idx_mensalidades_referencia (referencia_mes_ano)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS lancamentos_financeiros (
@@ -237,15 +172,6 @@ CREATE TABLE IF NOT EXISTS patrimonio (
     estado_conservacao ENUM('Bom','Atenção','Manutenção necessária') NOT NULL DEFAULT 'Bom',
     local_armazenamento VARCHAR(255) NULL,
     observacoes TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS biblioteca (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    titulo VARCHAR(255) NOT NULL,
-    link_drive TEXT NOT NULL,
-    categoria VARCHAR(100) NULL,
-    visibilidade ENUM('Interno','Restrito','Dirigência') NOT NULL DEFAULT 'Interno',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

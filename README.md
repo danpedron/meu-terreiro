@@ -2,7 +2,7 @@
 
 Plataforma administrativa web para organização de terreiros de Umbanda e comunidades afro-brasileiras. O projeto foi pensado para ser simples o suficiente para o uso cotidiano por dirigentes, regentes, secretários e pessoas mais velhas, sem abrir mão de uma base técnica preparada para evolução enterprise.
 
-> **Estado atual:** MVP em evolução. O repositório contém o núcleo de autenticação, o isolamento lógico por terreiro, o dashboard e o primeiro módulo de cadastro de filhos de santo. Os demais módulos estão documentados no roadmap e serão incorporados gradualmente.
+> **Estado atual:** plataforma funcional em evolução. O repositório contém onboarding de novos terreiros, isolamento por banco, autenticação por perfis, dashboard, cadastros operacionais, agenda, obrigações, financeiro, estoque, compras, patrimônio, biblioteca, álbum de memória, locais de referência e registros internos de segurança. Exportação e importação portátil de dados continuam no roadmap.
 
 ## Visão do projeto
 
@@ -14,14 +14,17 @@ O sistema foi desenhado com uma linguagem visual inspirada em referências afro-
 
 | Área | Objetivo |
 |---|---|
-| Terreiro | Cadastro de nome, localização, fundação, nação, regência e informações institucionais. |
-| Pessoas | Cadastro de filhos de santo, regentes, babalorixás, yalorixás, ogãs, ekedis e demais funções. |
-| Entidades | Registro de entidades, características, cores de vela, pontos riscados e recados autorizados. |
-| Obrigações | Catálogo de rituais e histórico das obrigações realizadas por cada filho. |
-| Agenda | Organização de giras, obrigações, festas, reuniões e outros compromissos. |
-| Biblioteca | Catálogo de livros e materiais, incluindo links controlados para arquivos do Google Drive. |
-| Financeiro | Definição da mensalidade, registro de pagamentos, acompanhamento de pendências e relatórios. |
-| Exportação | Exportação controlada dos dados do próprio filho para importação em outro terreiro, mediante autorização. |
+| Casa | Cadastro de nome, localização, fundação, nação, Babalorixá, Yalorixá, mensalidade sugerida e informações institucionais. |
+| Pessoas | Cadastro de filhos de santo, funções na casa e situação de participação. |
+| Entidades e obrigações | Características autorizadas, ponto riscado por link privado, recados, catálogo de obrigações e histórico individual com sigilo. |
+| Agenda e rotina | Giras, obrigações, festas, estudos, reuniões, tarefas de limpeza, manutenção, cozinha e comunicados internos. |
+| Financeiro | Mensalidades, entradas, saídas, meios de pagamento, comprovantes por link e visibilidade controlada. |
+| Estoque e compras | Folhas e ervas, velas, alimentos, produtos de limpeza, materiais, fornecedores, inventário e alertas de estoque mínimo. |
+| Preparo e oferendas | Registros administrativos reservados, com campo para cuidados ambientais e sem prescrever fundamento ritual. |
+| Memória e estudo | Biblioteca, materiais em nuvem, álbum de fotos com consentimento de imagem e patrimônio da casa. |
+| Locais e cuidado | Referências privadas para folhas, ervas, encruzilhadas e outros locais, com condição de acesso e restrição padrão. |
+| Segurança | Registro sigiloso de ocorrências, providências e contatos de apoio. |
+| Exportação | Exportação controlada dos dados do próprio filho para importação em outro terreiro, mediante autorização; planejada para próxima etapa. |
 
 ## Arquitetura multi-tenant
 
@@ -43,7 +46,7 @@ meuterreiro_<slug>
 └── biblioteca
 ```
 
-O código nunca deve decidir o banco do tenant a partir de texto recebido diretamente da URL. O `TenantManager` consulta o slug no banco central, verifica o status do tenant e só então abre a conexão para o banco associado. Em uma instalação de produção, a conta usada pela aplicação deve possuir apenas os privilégios necessários e as rotinas de provisionamento de bancos devem permanecer protegidas para a equipe responsável pela infraestrutura.
+O código nunca deve decidir o banco do tenant a partir de texto recebido diretamente da URL. O `TenantManager` consulta o slug no banco central, verifica o status do tenant e só então abre a conexão para o banco associado. A aplicação diária usa uma conta limitada; o onboarding usa uma conta separada de provisionamento apenas para criar o banco isolado e aplicar o schema inicial. Ambas as credenciais ficam fora do Git.
 
 ## Requisitos
 
@@ -76,6 +79,8 @@ export MEUTERREIRO_DB_HOST=127.0.0.1
 export MEUTERREIRO_DB_NAME=meuterreiro_admin
 export MEUTERREIRO_DB_USER=meuterreiro_app
 export MEUTERREIRO_DB_PASS='defina-uma-senha-forte-fora-do-repositorio'
+export MEUTERREIRO_PROVISIONER_DB_USER='meuterreiro_provisioner'
+export MEUTERREIRO_PROVISIONER_DB_PASS='defina-outra-senha-forte-fora-do-repositorio'
 ```
 
 Não use os valores deste exemplo em produção. Cada instalação deve gerar sua própria credencial forte e armazená-la em um cofre de segredos ou em configuração protegida do servidor.
@@ -95,11 +100,25 @@ Crie um usuário de aplicação com senha definida somente no ambiente. Em produ
 ```sql
 CREATE USER 'meuterreiro_app'@'localhost' IDENTIFIED BY 'defina-uma-senha-forte-fora-do-repositorio';
 GRANT SELECT, INSERT, UPDATE, DELETE ON meuterreiro_admin.* TO 'meuterreiro_app'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON meuterreiro_principal.* TO 'meuterreiro_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON `meuterreiro\\_%`.* TO 'meuterreiro_app'@'localhost';
+
+-- O provisionador é usado somente pelo cadastro de uma nova casa.
+CREATE USER 'meuterreiro_provisioner'@'localhost' IDENTIFIED BY 'defina-outra-senha-forte-fora-do-repositorio';
+GRANT CREATE ON *.* TO 'meuterreiro_provisioner'@'localhost';
+GRANT ALL PRIVILEGES ON `meuterreiro\\_%`.* TO 'meuterreiro_provisioner'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-### 4. Publicar o diretório público
+### 4. Aplicar migrations em instalações existentes
+
+Instalações já criadas antes da expansão devem aplicar as migrations primeiro. Execute a migration central uma vez e a migration de tenant uma vez para cada banco isolado, sempre após backup e em uma janela de manutenção:
+
+```bash
+mysql -u root -p meuterreiro_admin < database/migrations/001_central_onboarding.sql
+mysql -u root -p meuterreiro_principal < database/migrations/001_tenant_administracao.sql
+```
+
+### 5. Publicar o diretório público
 
 A raiz pública do servidor web deve apontar para o diretório `public/`. Os diretórios `config/`, `modules/` e `database/` não devem ser acessíveis como arquivos estáticos pela internet.
 
@@ -137,7 +156,7 @@ As credenciais iniciais não são fornecidas pelo repositório. Cada administrad
 
 ## Segurança e privacidade
 
-O projeto lida potencialmente com CPF, endereço, telefone, datas pessoais, registros espirituais e informações financeiras. Por isso, uma instalação real deve aplicar HTTPS, controle de acesso por papel, backups criptografados, retenção mínima de dados, trilhas de auditoria e política de consentimento compatível com a legislação aplicável.
+O projeto lida potencialmente com CPF, endereço, telefone, datas pessoais, registros espirituais e informações financeiras. A LGPD classifica dados referentes à convicção religiosa como dados pessoais sensíveis, o que exige cuidados reforçados [5]. Por isso, uma instalação real deve aplicar HTTPS, controle de acesso por papel, backups criptografados, retenção mínima de dados, trilhas de auditoria e política de consentimento compatível com a legislação aplicável. A política pública nacional voltada a povos e comunidades tradicionais de terreiro reforça a importância da autonomia, da preservação de saberes e do enfrentamento à intolerância [6].
 
 Nunca faça commit de senhas, tokens, chaves privadas, dumps de banco, cookies, arquivos `.env`, logs de produção ou URLs internas. Antes de cada push, execute uma busca por padrões sensíveis e revise o diff:
 
@@ -182,7 +201,7 @@ Toda alteração deste projeto deve ser registrada em um commit que explique o q
 
 ## Roadmap
 
-As próximas etapas incluem o cadastro completo do terreiro, perfis de dirigentes, entidades e pontos riscados com controle de acesso, obrigações, agenda de giras, biblioteca, mensalidades, exportação autorizada e trilha de auditoria. Cada módulo será implementado com atenção à separação entre dados de terreiros e à experiência de uso em dispositivos móveis.
+As próximas etapas priorizam exportação e importação autorizada dos dados de um filho de santo, relatórios financeiros, backups verificáveis, permissões ainda mais granulares, participação em agenda, anexos em armazenamento privado e testes automatizados. Cada melhoria deve preservar a separação entre terreiros, o uso em dispositivos móveis e a autonomia espiritual de cada casa.
 
 ## Licença
 
@@ -194,3 +213,5 @@ Este projeto é distribuído sob a licença MIT. Consulte [LICENSE](LICENSE).
 [2]: https://www.php.net/manual/en/book.pdo.php "Documentação oficial do PDO"
 [3]: https://mariadb.com/kb/en/documentation/ "Documentação oficial do MariaDB"
 [4]: https://www.php.net/manual/en/install.fpm.php "Documentação oficial do PHP-FPM"
+[5]: https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm "Lei Geral de Proteção de Dados Pessoais"
+[6]: https://www.gov.br/igualdaderacial/pt-br/assuntos/programas-e-projetos/politica-nacional-para-povos-e-comunidades-tradicionais-de-terreiro-e-matriz-africana "Política Nacional para Povos e Comunidades Tradicionais de Terreiro e de Matriz Africana"
