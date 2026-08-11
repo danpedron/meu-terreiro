@@ -12,7 +12,7 @@ if (is_readable($localConfig)) {
 
 define('CENTRAL_DB_HOST', getenv('MEUTERREIRO_DB_HOST') ?: '127.0.0.1');
 define('CENTRAL_DB_NAME', getenv('MEUTERREIRO_DB_NAME') ?: 'meuterreiro_admin');
-define('CENTRAL_DB_USER', getenv('MEUTERREIRO_DB_USER') ?: 'meuterreiro_app');
+define('CENTRAL_DB_USER', getenv('MEUTERREIRO_DB_USER') ?: (defined('MEUTERREIRO_LOCAL_DB_USER') ? MEUTERREIRO_LOCAL_DB_USER : 'meuterreiro_app'));
 define('CENTRAL_DB_PASS', getenv('MEUTERREIRO_DB_PASS') ?: (defined('MEUTERREIRO_LOCAL_DB_PASS') ? MEUTERREIRO_LOCAL_DB_PASS : ''));
 define('CENTRAL_DB_CHARSET', 'utf8mb4');
 
