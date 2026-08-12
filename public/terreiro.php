@@ -4,6 +4,7 @@ session_set_cookie_params(['httponly' => true, 'secure' => $secureCookie, 'sames
 session_start();
 require_once __DIR__ . '/../config/CommunityService.php';
 require_once __DIR__ . '/../config/analytics.php';
+require_once __DIR__ . '/../config/seo.php';
 function e(?string $value): string { return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8'); }
 $service = new CommunityService();
 $tenant = $service->getTenantForPublicDirectory(trim((string) ($_GET['c'] ?? '')));
@@ -14,14 +15,80 @@ $publicError = $_SESSION['public_error'] ?? null; unset($_SESSION['public_error'
 $publicSuccess = $_SESSION['public_success'] ?? null; unset($_SESSION['public_success']);
 $whatsappLink = $tenant['whatsapp_publico'] ? 'https://wa.me/' . preg_replace('/\D+/', '', $tenant['whatsapp_publico']) : null;
 $mapEnabled = !empty($tenant['mostrar_no_mapa']) && $tenant['latitude_publica'] !== null && $tenant['longitude_publica'] !== null;
+$canonicalUrl = meu_terreiro_canonical_url('terreiro.php', ['c' => $tenant['slug']]);
+$locationLabel = trim((string) ($tenant['cidade_publica'] ?? ''));
+if (!empty($tenant['estado_publico'])) { $locationLabel .= ($locationLabel ? ', ' : '') . $tenant['estado_publico']; }
+$seoTitle = meu_terreiro_compact_text($tenant['nome_exibicao'] . ($locationLabel ? ' em ' . $locationLabel : '') . ' — Meu Terreiro', 60);
+$seoDescription = meu_terreiro_compact_text(
+    $tenant['descricao_publica'] ?: ('Conheça ' . $tenant['nome_exibicao'] . ($locationLabel ? ', casa pública no diretório comunitário em ' . $locationLabel : '') . '.'),
+    160
+);
+$organizationSchema = [
+    '@context' => 'https://schema.org',
+    '@type' => ['Organization', 'Place'],
+    '@id' => $canonicalUrl . '#organization',
+    'name' => $tenant['nome_exibicao'],
+    'url' => $canonicalUrl,
+    'description' => $seoDescription,
+    'inLanguage' => 'pt-BR',
+];
+if ($locationLabel !== '') {
+    $organizationSchema['address'] = array_filter([
+        '@type' => 'PostalAddress',
+        'addressLocality' => $tenant['cidade_publica'] ?: null,
+        'addressRegion' => $tenant['estado_publico'] ?: null,
+        'addressCountry' => 'BR',
+    ]);
+}
+if ($mapEnabled) {
+    $organizationSchema['geo'] = [
+        '@type' => 'GeoCoordinates',
+        'latitude' => (float) $tenant['latitude_publica'],
+        'longitude' => (float) $tenant['longitude_publica'],
+    ];
+}
+if (!empty($tenant['whatsapp_publico'])) { $organizationSchema['telephone'] = $tenant['whatsapp_publico']; }
+if (!empty($tenant['email_publico'])) { $organizationSchema['email'] = $tenant['email_publico']; }
+$publicProperties = [];
+foreach ([
+    'Nação ou tradição informada' => $tenant['nacao_publica'],
+    'Dirigência informada' => $tenant['dirigente_publico'],
+    'Horários e giras' => $tenant['horarios_publicos'],
+    'Informação compartilhada' => $tenant['linha_presenca_publica'],
+] as $label => $value) {
+    if (!empty($value)) { $publicProperties[] = ['@type' => 'PropertyValue', 'name' => $label, 'value' => meu_terreiro_compact_text((string) $value, 500)]; }
+}
+if ($publicProperties) { $organizationSchema['additionalProperty'] = $publicProperties; }
+$jsonLd = [
+    $organizationSchema,
+    [
+        '@context' => 'https://schema.org',
+        '@type' => 'WebPage',
+        '@id' => $canonicalUrl . '#webpage',
+        'url' => $canonicalUrl,
+        'name' => $seoTitle,
+        'description' => $seoDescription,
+        'inLanguage' => 'pt-BR',
+        'about' => ['@id' => $canonicalUrl . '#organization'],
+        'isPartOf' => ['@id' => meu_terreiro_public_base_url() . '/#website'],
+    ],
+    [
+        '@context' => 'https://schema.org',
+        '@type' => 'BreadcrumbList',
+        'itemListElement' => [
+            ['@type' => 'ListItem', 'position' => 1, 'name' => 'Diretório comunitário', 'item' => meu_terreiro_canonical_url('directory.php')],
+            ['@type' => 'ListItem', 'position' => 2, 'name' => $tenant['nome_exibicao'], 'item' => $canonicalUrl],
+        ],
+    ],
+];
 ?>
 <!doctype html><html lang="pt-BR"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#5a3324">
-<title><?php echo e($tenant['nome_exibicao']); ?> — Meu Terreiro</title>
+<?php meu_terreiro_render_seo_head($seoTitle, $seoDescription, $canonicalUrl, true, $jsonLd); ?>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet"><link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" integrity="sha256-p4NxAoJBhIINfQ6Lr5UVR8a6G6N6au6M6F1eQSCV5p0A=" crossorigin=""><link href="assets/css/app.css" rel="stylesheet">
 <?php meu_terreiro_analytics_head(); ?>
 </head><body class="mt-public-body">
-<nav class="navbar navbar-expand-lg mt-navbar navbar-dark"><div class="container"><a class="navbar-brand mt-brand" href="directory.php"><span class="mt-brand-mark"><i class="fa-solid fa-leaf"></i></span>Meu Terreiro</a><div class="ms-auto d-flex gap-2"><a class="btn btn-sm btn-outline-light" href="directory.php">Diretório</a><a class="btn btn-sm btn-light" href="index.php?p=comunidade">Minha comunidade</a></div></div></nav>
+<nav class="navbar navbar-expand-lg mt-navbar navbar-dark"><div class="container"><a class="navbar-brand mt-brand" href="directory.php"><span class="mt-brand-mark"><i class="fa-solid fa-leaf"></i></span>Meu Terreiro</a><div class="ms-auto d-flex gap-2"><a class="btn btn-sm btn-outline-light" href="sobre.php">Sobre</a><a class="btn btn-sm btn-outline-light" href="directory.php">Diretório</a><a class="btn btn-sm btn-light" href="index.php?p=comunidade">Minha comunidade</a></div></div></nav>
 <main class="container py-4 py-lg-5">
 <?php if ($publicError): ?><div class="alert alert-danger" role="alert"><?php echo e($publicError); ?></div><?php endif; ?>
 <?php if ($publicSuccess): ?><div class="alert alert-success" role="status"><?php echo e($publicSuccess); ?></div><?php endif; ?>

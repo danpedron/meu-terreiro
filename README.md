@@ -163,6 +163,16 @@ O diretório público está em `public/directory.php`. A busca por geolocalizaç
 
 As credenciais iniciais não são fornecidas pelo repositório. Cada administrador deve criá-las durante a instalação e alterar qualquer senha temporária imediatamente.
 
+## Descoberta, SEO e agentes de IA
+
+As páginas públicas possuem títulos e descrições específicos, URLs canônicas, Open Graph, JSON-LD com entidades visíveis, trilhas de navegação e links internos entre o diretório, localidades e perfis de casas. A página institucional `public/sobre.php` apresenta o propósito da plataforma, enquanto `public/directory.php` concentra a descoberta de casas que autorizaram sua publicação.
+
+O `public/sitemap.php` lista somente páginas canônicas, localidades com pelo menos uma casa pública e perfis ativos publicados. Ele inclui `lastmod` baseado na atualização real do cadastro central. O `public/robots.txt` mantém ações, autenticação e áreas privadas fora do rastreamento, e o `public/llms.txt` oferece uma descrição legível por agentes que adotem esse formato. Nenhuma dessas camadas transforma um perfil privado em público.
+
+Páginas de busca por cidade só recebem sinal de indexação quando retornam casas públicas reais. Buscas por geolocalização do visitante e páginas sem resultados são marcadas como `noindex`; a posição do visitante continua sendo usada somente na consulta atual. A tag GA4 é carregada apenas após consentimento explícito e não é inserida nas áreas autenticadas ou nos endpoints de formulários.
+
+SEO e descoberta por IA não garantem posicionamento, citações ou recomendações. Para melhorar a relevância de uma casa, a liderança deve manter atualizados os dados que escolheu divulgar, escrever uma apresentação objetiva e solicitar links de fontes externas confiáveis, como página institucional, rede social oficial ou diretório comunitário — sem publicar endereço ou informação ritual que não queira tornar pública. Consulte também as orientações do [Google Search Central](https://developers.google.com/search/docs/fundamentals/seo-starter-guide) e as [Diretrizes para Webmasters do Bing](https://www.bing.com/webmasters/help/webmaster-guidelines-30fba23a).
+
 ## Segurança e privacidade
 
 O projeto lida potencialmente com CPF, endereço, telefone, datas pessoais, registros espirituais e informações financeiras. A LGPD classifica dados referentes à convicção religiosa como dados pessoais sensíveis, o que exige cuidados reforçados [5]. Por isso, uma instalação real deve aplicar HTTPS, controle de acesso por papel, backups criptografados, retenção mínima de dados, trilhas de auditoria e política de consentimento compatível com a legislação aplicável. A política pública nacional voltada a povos e comunidades tradicionais de terreiro reforça a importância da autonomia, da preservação de saberes e do enfrentamento à intolerância [6].

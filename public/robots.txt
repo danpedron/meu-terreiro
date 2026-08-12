@@ -1,12 +1,19 @@
+# Meu Terreiro: somente conteúdo explicitamente público é rastreável.
+# Esta política se aplica igualmente a buscadores e a agentes de resposta que respeitem robots.txt.
 User-agent: *
+Allow: /meuterreiro/public/sobre.php
 Allow: /meuterreiro/public/directory.php
 Allow: /meuterreiro/public/terreiro.php
-Allow: /meuterreiro/public/index.php
+Allow: /meuterreiro/public/sitemap.php
+Allow: /meuterreiro/public/llms.txt
+Disallow: /meuterreiro/public/index.php
 Disallow: /meuterreiro/public/auth.php
 Disallow: /meuterreiro/public/account_register.php
+Disallow: /meuterreiro/public/register.php
 Disallow: /meuterreiro/public/membership_request.php
-Disallow: /meuterreiro/public/consultation_request.php
 Disallow: /meuterreiro/public/membership_decision.php
+Disallow: /meuterreiro/public/consultation_request.php
 Disallow: /meuterreiro/public/tenant_create.php
 Disallow: /meuterreiro/public/select_tenant.php
+
 Sitemap: https://umbanda.pedron.com.br/meuterreiro/public/sitemap.php

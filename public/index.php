@@ -7,6 +7,7 @@ $csrfToken = $_SESSION['csrf_token'];
 function e(?string $value): string { return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8'); }
 
 $analyticsPublic = !isset($_SESSION['user_id']);
+require_once __DIR__ . '/../config/seo.php';
 if ($analyticsPublic) {
     require_once __DIR__ . '/../config/analytics.php';
 }
@@ -28,9 +29,17 @@ $loginSuccess = $_SESSION['login_success'] ?? null; unset($_SESSION['login_succe
 $loginError = $_SESSION['login_error'] ?? null; unset($_SESSION['login_error']);
 $accountError = $_SESSION['account_register_error'] ?? null; unset($_SESSION['account_register_error']);
 $accountOld = $_SESSION['account_register_old'] ?? []; unset($_SESSION['account_register_old']);
+
+// Esta rota reúne login, cadastro e áreas administrativas. Nenhuma delas deve competir por indexação orgânica.
+meu_terreiro_send_noindex_header();
+$seoTitle = $page === 'cadastro' ? 'Criar conta — Meu Terreiro' : ($page === 'login' ? 'Entrar — Meu Terreiro' : 'Área da comunidade — Meu Terreiro');
+$seoDescription = $page === 'cadastro'
+    ? 'Crie uma conta no Meu Terreiro para conhecer casas, solicitar vínculo ou cadastrar uma nova casa.'
+    : 'Acesso à comunidade e à área administrativa do Meu Terreiro.';
 ?>
 <!doctype html><html lang="pt-BR"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><meta name="theme-color" content="#5a3324"><meta name="description" content="Comunidade e administração segura para terreiros e pessoas de axé."><title>Meu Terreiro — Comunidade e administração</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><meta name="theme-color" content="#5a3324">
+<?php meu_terreiro_render_seo_head($seoTitle, $seoDescription, meu_terreiro_canonical_url('index.php'), false); ?>
 <link rel="manifest" href="manifest.webmanifest"><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet"><link href="assets/css/app.css" rel="stylesheet">
 <?php if ($analyticsPublic) { meu_terreiro_analytics_head(); } ?>
 </head><body>

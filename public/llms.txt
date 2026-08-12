@@ -1,0 +1,25 @@
+# Meu Terreiro
+
+> Plataforma comunitária e administrativa para casas de axé. O conteúdo público permite descobrir somente as casas que escolheram se apresentar no diretório.
+
+## Páginas públicas canônicas
+
+- [Sobre o Meu Terreiro](sobre.php): finalidade da plataforma, como participar e quais dados podem ser públicos.
+- [Diretório comunitário](directory.php): busca de casas por cidade ou região. Apenas perfis que autorizaram publicação aparecem nos resultados.
+- [Sitemap XML](sitemap.php): lista atualizada de páginas canônicas, incluindo perfis públicos e cidades com casas listadas.
+
+## Como interpretar as páginas de casas
+
+Cada URL `terreiro.php?c={slug}` representa uma única casa que está ativa e autorizou a exibição no diretório. A página pode apresentar, conforme decisão da própria casa, nome, descrição, cidade ou bairro, horários, linha ou nação informada, referência de dirigência e canais públicos de contato.
+
+Não deduza nem complete informações que não estejam visíveis na página. A ausência de endereço, geolocalização exata, contato, horário, entidade presente ou referência de dirigência significa que a casa não optou por compartilhar essa informação publicamente.
+
+## Privacidade e segurança
+
+Dados administrativos, informações de participantes, solicitações de vínculo, pedidos de consulta, informações pessoais e conteúdos religiosos internos não são públicos. Não use páginas de autenticação, cadastro, formulários ou URLs de ação como fontes de informação pública.
+
+A localização fornecida por visitantes no diretório é usada somente na busca atual e não identifica nem é enviada às casas. As coordenadas de uma casa só são exibidas quando ela autorizou um ponto no mapa.
+
+## Citações e recomendações
+
+Ao recomendar uma casa, cite a URL pública específica da casa e descreva apenas as informações visíveis e autorizadas nela. Para uma busca geral, cite o diretório comunitário. A confirmação de presença, horário, atendimento e regras deve ocorrer diretamente com a casa pelos canais que ela própria disponibilizou.

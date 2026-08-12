@@ -66,10 +66,14 @@ final class CommunityService
         return $stmt->fetch() ?: null;
     }
 
-    public function findPublicTenants(?float $latitude = null, ?float $longitude = null, ?string $city = null, int $radiusKm = 25): array
+    public function findPublicTenants(?float $latitude = null, ?float $longitude = null, ?string $city = null, int $radiusKm = 25, ?string $state = null): array
     {
         $radiusKm = max(1, min($radiusKm, 50));
         $city = trim((string) $city);
+        $state = strtoupper(trim((string) $state));
+        if (!preg_match('/^[A-Z]{2}$/', $state)) {
+            $state = '';
+        }
         $params = [];
         $selectDistance = 'NULL AS distancia_km';
         $where = "t.status = 'Ativo' AND t.listar_publicamente = 1";
@@ -82,6 +86,10 @@ final class CommunityService
         } elseif ($city !== '') {
             $where .= ' AND t.cidade_publica LIKE ?';
             $params[] = '%' . mb_substr($city, 0, 120) . '%';
+            if ($state !== '') {
+                $where .= ' AND t.estado_publico = ?';
+                $params[] = $state;
+            }
         }
 
         $sql = "SELECT t.id, t.slug, t.nome_exibicao, t.descricao_publica, t.nacao_publica, t.dirigente_publico,
@@ -102,10 +110,46 @@ final class CommunityService
         return $stmt->fetchAll();
     }
 
+    /**
+     * Retorna somente perfis que autorizaram listagem pública, com a data real da última atualização.
+     * O resultado é usado exclusivamente pelo sitemap, nunca para expor dados internos.
+     */
+    public function listPublicTenantSitemapEntries(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT slug, updated_at
+             FROM tenants
+             WHERE status = 'Ativo' AND listar_publicamente = 1
+             ORDER BY slug ASC"
+        );
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /**
+     * Lista localidades que já têm ao menos uma casa publicamente visível.
+     * Evita criar páginas geográficas vazias ou baseadas em informações privadas.
+     */
+    public function listPublicLocations(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT cidade_publica, estado_publico, MAX(updated_at) AS updated_at, COUNT(*) AS total_casas
+             FROM tenants
+             WHERE status = 'Ativo'
+               AND listar_publicamente = 1
+               AND cidade_publica IS NOT NULL
+               AND TRIM(cidade_publica) <> ''
+             GROUP BY cidade_publica, estado_publico
+             ORDER BY cidade_publica ASC, estado_publico ASC"
+        );
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /**
+     * Mantido para compatibilidade com instalações que já chamavam este método.
+     */
     public function listPublicTenantSlugs(): array
     {
-        $stmt = $this->db->query("SELECT slug FROM tenants WHERE status = 'Ativo' AND listar_publicamente = 1 ORDER BY slug ASC");
-        return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        return array_column($this->listPublicTenantSitemapEntries(), 'slug');
     }
 
     public function requestMembership(int $userId, int $tenantId, string $role, string $message): array
