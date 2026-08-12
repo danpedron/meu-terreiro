@@ -12,10 +12,12 @@ CREATE TABLE IF NOT EXISTS tenants (
     status ENUM('Ativo', 'Suspenso', 'Inativo') NOT NULL DEFAULT 'Ativo',
     onboarding_status ENUM('Em configuração','Concluído') NOT NULL DEFAULT 'Em configuração',
     termos_aceitos_em DATETIME NULL,
-    -- Diretório público: todos os campos são opt-in e revisáveis pela própria casa.
-    listar_publicamente TINYINT(1) NOT NULL DEFAULT 0,
+    -- Diretório público: centros aprovados aparecem por padrão e a própria casa pode ocultá-los a qualquer momento.
+    listar_publicamente TINYINT(1) NOT NULL DEFAULT 1,
     mostrar_no_mapa TINYINT(1) NOT NULL DEFAULT 0,
-    localizacao_publica ENUM('Nenhuma','Bairro','Aproximada','Endereco') NOT NULL DEFAULT 'Nenhuma',
+    localizacao_publica ENUM('Nenhuma','Bairro','Aproximada','Endereco') NOT NULL DEFAULT 'Bairro',
+    cadastro_publico_pendente TINYINT(1) NOT NULL DEFAULT 0,
+    solicitante_cadastro_nome VARCHAR(255) NULL,
     endereco_publico VARCHAR(255) NULL,
     bairro_publico VARCHAR(120) NULL,
     cidade_publica VARCHAR(120) NULL,

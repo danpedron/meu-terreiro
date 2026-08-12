@@ -61,8 +61,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao,cidade,estado,telefone,email_contato,endereco_publico,politica_privacidade) VALUES (?,?,?,?,?,?,?)');
             $stmt->execute($detailData);
         }
-        audit($tenantConn, 'editar', 'terreiro_info', (int) ($existingId ?: $tenantConn->lastInsertId()), 'Dados institucionais atualizados');
-        flash('success', 'Dados da casa atualizados.');
+        // O diretório parte de cidade/UF e posição aproximada quando a casa já as informou aqui.
+        // Contatos, endereço e outras informações continuam sob controle do Perfil público.
+        $latitudePublica = $houseData[3] !== null && $houseData[4] !== null ? (float) $houseData[3] : null;
+        $longitudePublica = $houseData[3] !== null && $houseData[4] !== null ? (float) $houseData[4] : null;
+        $centralStmt = $centralConn->prepare(
+            "UPDATE tenants
+             SET nome_exibicao = ?, listar_publicamente = 1, mostrar_no_mapa = ?, localizacao_publica = ?, cidade_publica = ?, estado_publico = ?, latitude_publica = ?, longitude_publica = ?, descricao_publica = ?, nacao_publica = ?
+             WHERE id = ?"
+        );
+        $centralStmt->execute([
+            $nome,
+            $latitudePublica !== null ? 1 : 0,
+            $latitudePublica !== null ? 'Aproximada' : 'Bairro',
+            $detailData[1],
+            strtoupper((string) ($detailData[2] ?? '')) ?: null,
+            $latitudePublica,
+            $longitudePublica,
+            $detailData[0],
+            $houseData[2],
+            $tenantId,
+        ]);
+        audit($tenantConn, 'editar', 'terreiro_info', (int) ($existingId ?: $tenantConn->lastInsertId()), 'Dados institucionais atualizados e localização pública sincronizada.');
+        flash('success', 'Dados da casa atualizados. Cidade e localização aproximada foram sincronizadas com o diretório público; você pode ocultar o perfil público a qualquer momento.');
     }
 
     if ($action === 'create_user') {

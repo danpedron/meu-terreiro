@@ -159,7 +159,8 @@ final class TenantManager
         string $nacao,
         ?string $fundacao,
         string $roleRequested,
-        bool $aceitouTermos
+        bool $aceitouTermos,
+        array $publicProfile = []
     ): array {
         $nomeTerreiro = trim($nomeTerreiro);
         $nacao = trim($nacao);
@@ -180,6 +181,10 @@ final class TenantManager
         $user = $userStmt->fetch();
         if (!$user) {
             return ['error' => 'Sua conta não está disponível para cadastrar uma casa.'];
+        }
+        $profile = $this->normalizePublicProfile($publicProfile, $nacao);
+        if (isset($profile['error'])) {
+            return ['error' => $profile['error']];
         }
 
         $dbName = 'meuterreiro_' . $slug;
@@ -206,10 +211,10 @@ final class TenantManager
 
             $this->centralConn->beginTransaction();
             $tenantStmt = $this->centralConn->prepare(
-                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, dirigente_status)
-                 VALUES (?, ?, ?, ?, 'Ativo', 'Em configuração', NOW(), 'Sem dirigente')"
+                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, dirigente_status, listar_publicamente, mostrar_no_mapa, localizacao_publica, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, aceita_solicitacoes_vinculo)
+                 VALUES (?, ?, ?, ?, 'Ativo', 'Em configuração', NOW(), 'Sem dirigente', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
             );
-            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $user['email']]);
+            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $user['email'], $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos']]);
             $tenantId = (int) $this->centralConn->lastInsertId();
             $membershipStatus = $roleRequested === 'Colaborador' ? 'Ativo' : 'PendenteAdminGlobal';
             $membershipStmt = $this->centralConn->prepare(
@@ -229,8 +234,8 @@ final class TenantManager
 
             $infoStmt = $tenantConn->prepare('INSERT INTO terreiro_info (nome, fundacao, nacao, babalorixa, yalorixa) VALUES (?, ?, ?, ?, ?)');
             $infoStmt->execute([$nomeTerreiro, $fundacao ?: null, $nacao ?: null, null, null]);
-            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (email_contato) VALUES (?)');
-            $detailStmt->execute([$user['email']]);
+            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, email_contato) VALUES (?, ?, ?, ?)');
+            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $user['email']]);
             return ['tenant_id' => $tenantId, 'slug' => $slug, 'leadership_pending' => $membershipStatus === 'PendenteAdminGlobal'];
         } catch (Throwable $e) {
             if ($this->centralConn->inTransaction()) {
@@ -245,6 +250,116 @@ final class TenantManager
             }
             error_log('Falha ao criar tenant por conta global: ' . $e->getMessage());
             return ['error' => 'Não foi possível concluir o cadastro agora. Tente novamente ou contate a administração.'];
+        }
+    }
+
+    /**
+     * Recebe somente informações que o centro aceita tornar públicas após aprovação.
+     * Endereço e contatos não são presumidos nem copiados automaticamente.
+     */
+    private function normalizePublicProfile(array $input, string $fallbackNation = ''): array
+    {
+        $clean = static fn(string $key, int $length = 3000): ?string => ($value = trim(mb_substr((string) ($input[$key] ?? ''), 0, $length))) !== '' ? $value : null;
+        $city = $clean('cidade_publica', 120);
+        $state = strtoupper((string) ($clean('estado_publico', 2) ?? ''));
+        if ($city === null) {
+            return ['error' => 'Informe a cidade para que a casa possa ser localizada no diretório.'];
+        }
+        if (!preg_match('/^[A-Z]{2}$/', $state)) {
+            return ['error' => 'Informe a UF com duas letras para a localização pública.'];
+        }
+        $latRaw = str_replace(',', '.', trim((string) ($input['latitude_publica'] ?? '')));
+        $lngRaw = str_replace(',', '.', trim((string) ($input['longitude_publica'] ?? '')));
+        $latitude = $latRaw !== '' && is_numeric($latRaw) ? (float) $latRaw : null;
+        $longitude = $lngRaw !== '' && is_numeric($lngRaw) ? (float) $lngRaw : null;
+        if (($latitude === null) !== ($longitude === null) || ($latitude !== null && ($latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180))) {
+            return ['error' => 'Informe latitude e longitude válidas juntas, ou deixe ambas vazias.'];
+        }
+        return [
+            'cidade_publica' => $city,
+            'estado_publico' => $state,
+            'latitude_publica' => $latitude,
+            'longitude_publica' => $longitude,
+            'mostrar_no_mapa' => $latitude !== null ? 1 : 0,
+            'localizacao_publica' => $latitude !== null ? 'Aproximada' : 'Bairro',
+            'descricao_publica' => $clean('descricao_publica'),
+            'nacao_publica' => $clean('nacao_publica', 120) ?: (trim($fallbackNation) ?: null),
+            'horarios_publicos' => $clean('horarios_publicos'),
+        ];
+    }
+
+    /**
+     * Permite iniciar um cadastro de centro sem criar conta. O registro fica
+     * suspenso e invisível até uma decisão explícita da administração global.
+     */
+    public function createPublicTenantSubmission(string $contactName, string $contactEmail, string $nomeTerreiro, string $nacao, ?string $fundacao, array $publicProfile, bool $aceitouTermos): array
+    {
+        $contactName = trim($contactName);
+        $contactEmail = mb_strtolower(trim($contactEmail));
+        $nomeTerreiro = trim($nomeTerreiro);
+        $nacao = trim($nacao);
+        $slug = self::slugify($nomeTerreiro);
+        if (mb_strlen($contactName) < 3 || mb_strlen($contactName) > 255) {
+            return ['error' => 'Informe o nome da pessoa responsável pelo cadastro.'];
+        }
+        if (!filter_var($contactEmail, FILTER_VALIDATE_EMAIL)) {
+            return ['error' => 'Informe um e-mail válido para retorno da administração global.'];
+        }
+        if (mb_strlen($nomeTerreiro) < 3 || mb_strlen($nomeTerreiro) > 255 || $slug === '' || strlen($slug) > 40) {
+            return ['error' => 'Informe o nome do centro com pelo menos 3 caracteres.'];
+        }
+        if (!$aceitouTermos) {
+            return ['error' => 'Confirme que possui autorização para cadastrar o centro e que as informações públicas estão corretas.'];
+        }
+        $profile = $this->normalizePublicProfile($publicProfile, $nacao);
+        if (isset($profile['error'])) {
+            return ['error' => $profile['error']];
+        }
+        $dbName = 'meuterreiro_' . $slug;
+        $existing = $this->centralConn->prepare('SELECT id FROM tenants WHERE slug = ? OR db_name = ? LIMIT 1');
+        $existing->execute([$slug, $dbName]);
+        if ($existing->fetch()) {
+            return ['error' => 'Já existe um centro com esse identificador. Se a casa já existir, peça uma vinculação pelo diretório.'];
+        }
+        $schemaPath = __DIR__ . '/../database/terreiro_schema.sql';
+        if (!is_readable($schemaPath)) {
+            error_log('Schema do tenant não encontrado: ' . $schemaPath);
+            return ['error' => 'Não foi possível preparar a estrutura do centro agora.'];
+        }
+        $databaseCreated = false;
+        $provisionerConn = null;
+        try {
+            $provisionerConn = ProvisionerDB::getConnection();
+            $provisionerConn->exec("CREATE DATABASE `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            $databaseCreated = true;
+            $provisionedTenantConn = database_connection($dbName, PROVISIONER_DB_USER, PROVISIONER_DB_PASS);
+            $provisionedTenantConn->exec((string) file_get_contents($schemaPath));
+            $tenantConn = database_connection($dbName, CENTRAL_DB_USER, CENTRAL_DB_PASS);
+
+            $this->centralConn->beginTransaction();
+            $tenantStmt = $this->centralConn->prepare(
+                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, listar_publicamente, mostrar_no_mapa, localizacao_publica, cadastro_publico_pendente, solicitante_cadastro_nome, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, aceita_solicitacoes_vinculo)
+                 VALUES (?, ?, ?, ?, 'Suspenso', 'Em configuração', NOW(), 1, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
+            );
+            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $contactEmail, $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $contactName, $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos']]);
+            $tenantId = (int) $this->centralConn->lastInsertId();
+            $this->log(null, $tenantId, 'cadastro_publico_centro_recebido', 'tenants', $tenantId, 'Cadastro sem login aguardando análise global.');
+            $this->centralConn->commit();
+
+            $infoStmt = $tenantConn->prepare('INSERT INTO terreiro_info (nome, fundacao, nacao, babalorixa, yalorixa) VALUES (?, ?, ?, ?, ?)');
+            $infoStmt->execute([$nomeTerreiro, $fundacao ?: null, $nacao ?: null, null, null]);
+            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, email_contato) VALUES (?, ?, ?, ?)');
+            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $contactEmail]);
+            return ['tenant_id' => $tenantId, 'slug' => $slug];
+        } catch (Throwable $e) {
+            if ($this->centralConn->inTransaction()) {
+                $this->centralConn->rollBack();
+            }
+            if ($databaseCreated && $provisionerConn instanceof PDO) {
+                try { $provisionerConn->exec("DROP DATABASE IF EXISTS `$dbName`"); } catch (Throwable $cleanupError) { error_log('Falha ao limpar banco de cadastro público: ' . $cleanupError->getMessage()); }
+            }
+            error_log('Falha ao cadastrar centro sem login: ' . $e->getMessage());
+            return ['error' => 'Não foi possível concluir o cadastro agora. Tente novamente mais tarde.'];
         }
     }
 

@@ -251,6 +251,39 @@ final class CommunityService
         return $stmt->fetchAll();
     }
 
+    public function listPendingPublicTenantSubmissions(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT id, nome_exibicao, solicitante_cadastro_nome, email_responsavel, cidade_publica, estado_publico, nacao_publica, descricao_publica, horarios_publicos, created_at
+             FROM tenants
+             WHERE cadastro_publico_pendente = 1 AND status = 'Suspenso'
+             ORDER BY created_at ASC"
+        );
+        return $stmt->fetchAll() ?: [];
+    }
+
+    public function decidePublicTenantSubmission(int $actorId, int $tenantId, bool $approve, string $note = ''): array
+    {
+        if (!$this->isGlobalAdmin($actorId)) {
+            return ['error' => 'Somente a administração global pode analisar cadastros públicos de centros.'];
+        }
+        $stmt = $this->db->prepare("SELECT id, nome_exibicao FROM tenants WHERE id = ? AND cadastro_publico_pendente = 1 AND status = 'Suspenso' LIMIT 1");
+        $stmt->execute([$tenantId]);
+        $tenant = $stmt->fetch();
+        if (!$tenant) {
+            return ['error' => 'Este cadastro não está disponível para decisão.'];
+        }
+        $note = trim(mb_substr($note, 0, 1000));
+        $update = $this->db->prepare(
+            $approve
+                ? "UPDATE tenants SET status = 'Ativo', cadastro_publico_pendente = 0, listar_publicamente = 1 WHERE id = ?"
+                : "UPDATE tenants SET status = 'Inativo', cadastro_publico_pendente = 0, listar_publicamente = 0 WHERE id = ?"
+        );
+        $update->execute([$tenantId]);
+        $this->log($actorId, $tenantId, $approve ? 'cadastro_publico_centro_aprovado' : 'cadastro_publico_centro_recusado', 'tenants', $tenantId, $note ?: 'Decisão da administração global.');
+        return ['status' => $approve ? 'Ativo' : 'Inativo', 'tenant_id' => $tenantId, 'nome_exibicao' => $tenant['nome_exibicao']];
+    }
+
     public function listGlobalPendingLeadership(): array
     {
         $stmt = $this->db->query(
