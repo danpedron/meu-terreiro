@@ -60,6 +60,20 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_users_global_role (global_role, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token_hash CHAR(64) NOT NULL,
+    request_ip VARCHAR(45) NULL,
+    requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    UNIQUE KEY uq_password_reset_token_hash (token_hash),
+    INDEX idx_password_reset_user (user_id, used_at),
+    INDEX idx_password_reset_rate (request_ip, requested_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS user_profiles (
     user_id INT PRIMARY KEY,
     cidade VARCHAR(120) NULL,
