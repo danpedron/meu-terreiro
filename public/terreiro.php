@@ -85,7 +85,7 @@ $jsonLd = [
 <!doctype html><html lang="pt-BR"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#5a3324">
 <?php meu_terreiro_render_seo_head($seoTitle, $seoDescription, $canonicalUrl, true, $jsonLd); ?>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet"><link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" integrity="sha256-p4NxAoJBhIINfQ6Lr5UVR8a6G6N6au6M6F1eQSCV5p0A=" crossorigin=""><link href="assets/css/app.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet"><link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""><link href="assets/css/app.css" rel="stylesheet">
 <?php meu_terreiro_analytics_head(); ?>
 </head><body class="mt-public-body">
 <nav class="navbar navbar-expand-lg mt-navbar navbar-dark"><div class="container"><a class="navbar-brand mt-brand" href="directory.php"><span class="mt-brand-mark"><i class="fa-solid fa-leaf"></i></span>Meu Terreiro</a><div class="ms-auto d-flex gap-2"><a class="btn btn-sm btn-outline-light" href="sobre.php">Sobre</a><a class="btn btn-sm btn-outline-light" href="directory.php">Diretório</a><a class="btn btn-sm btn-light" href="index.php?p=comunidade">Minha comunidade</a></div></div></nav>

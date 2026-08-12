@@ -78,7 +78,7 @@ $baseSearchParams = [
     <?php meu_terreiro_render_seo_head($seoTitle, $seoDescription, $canonicalUrl, $isIndexable, $jsonLd); ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
-    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" integrity="sha256-p4NxAoJBhIINfQ6Lr5UVR8a6G6N6au6M6F1eQSCV5p0A=" crossorigin="">
+    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link href="assets/css/app.css" rel="stylesheet">
 <?php meu_terreiro_analytics_head(); ?>
 </head>
