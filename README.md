@@ -10,6 +10,10 @@ O **Meu Terreiro** busca apoiar a administração da casa de axé sem substituir
 
 O sistema foi desenhado com uma linguagem visual inspirada em referências afro-brasileiras de maneira respeitosa: tons de terra e barro lembram o vínculo com o chão e a ancestralidade; dourado representa cuidado e prosperidade; verde remete às folhas e à natureza; e o índigo comunica acolhimento e profundidade. A interface usa esses elementos como paleta e hierarquia visual, sem transformar símbolos sagrados em decoração genérica.
 
+## Projeto voluntário e contribuições
+
+O **Meu Terreiro** é um projeto voluntário em evolução. Sugestões de melhorias, relatos de uso, ideias de novas funcionalidades e contribuições para o desenvolvimento são bem-vindos. Para conversar sobre o projeto, entre em contato com **Dan Pedron** pelo WhatsApp [+55 47 93618-2693](https://wa.me/5547936182693) ou pelo e-mail [danpedron@gmail.com](mailto:danpedron@gmail.com).
+
 ## Funcionalidades previstas
 
 | Área | Objetivo |
