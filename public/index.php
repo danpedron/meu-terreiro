@@ -6,6 +6,11 @@ if (empty($_SESSION['csrf_token'])) { $_SESSION['csrf_token'] = bin2hex(random_b
 $csrfToken = $_SESSION['csrf_token'];
 function e(?string $value): string { return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8'); }
 
+$analyticsPublic = !isset($_SESSION['user_id']);
+if ($analyticsPublic) {
+    require_once __DIR__ . '/../config/analytics.php';
+}
+
 $publicPages = ['login', 'cadastro'];
 $resourcePages = ['filhos','agenda','obrigacoes_tipo','registros_obrigacoes','entidades','mensalidades','financeiro','estoque','movimentacoes_estoque','fornecedores','compras','preparos','oferendas','tarefas','patrimonio','biblioteca','album','locais','comunicados','incidentes'];
 $tenantPages = array_merge(['dashboard','configuracoes','portabilidade','solicitacoes','consultas','visibilidade-publica'], $resourcePages);
@@ -27,6 +32,7 @@ $accountOld = $_SESSION['account_register_old'] ?? []; unset($_SESSION['account_
 <!doctype html><html lang="pt-BR"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"><meta name="theme-color" content="#5a3324"><meta name="description" content="Comunidade e administração segura para terreiros e pessoas de axé."><title>Meu Terreiro — Comunidade e administração</title>
 <link rel="manifest" href="manifest.webmanifest"><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet"><link href="assets/css/app.css" rel="stylesheet">
+<?php if ($analyticsPublic) { meu_terreiro_analytics_head(); } ?>
 </head><body>
 <a class="mt-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
 <?php if (!isset($_SESSION['user_id'])): ?>
@@ -52,4 +58,4 @@ elseif ($page === 'portabilidade') { include __DIR__ . '/../modules/portabilidad
 elseif (in_array($page, $resourcePages, true)) { $resourceKey = $page; include __DIR__ . '/../modules/resource.php'; }
 ?></main>
 <nav class="mobile-nav" aria-label="Navegação principal"><a href="?p=comunidade"><i class="fa-solid fa-people-group"></i><span>Comunidade</span></a><a href="directory.php"><i class="fa-solid fa-compass"></i><span>Encontrar</span></a><?php if (!empty($_SESSION['tenant_id'])): ?><a href="?p=dashboard"><i class="fa-solid fa-house"></i><span>Casa</span></a><a href="?p=agenda"><i class="fa-solid fa-calendar-days"></i><span>Agenda</span></a><a href="?p=solicitacoes"><i class="fa-solid fa-bell"></i><span>Pedidos</span></a><?php else: ?><a href="?p=nova-casa"><i class="fa-solid fa-house-circle-check"></i><span>Criar casa</span></a><?php endif; ?></nav>
-<?php endif; ?><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
+<?php endif; ?><?php if ($analyticsPublic) { meu_terreiro_analytics_consent_banner(); } ?><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>

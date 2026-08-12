@@ -102,6 +102,12 @@ final class CommunityService
         return $stmt->fetchAll();
     }
 
+    public function listPublicTenantSlugs(): array
+    {
+        $stmt = $this->db->query("SELECT slug FROM tenants WHERE status = 'Ativo' AND listar_publicamente = 1 ORDER BY slug ASC");
+        return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    }
+
     public function requestMembership(int $userId, int $tenantId, string $role, string $message): array
     {
         if (!in_array($role, self::MEMBERSHIP_ROLES, true)) {

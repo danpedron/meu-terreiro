@@ -3,6 +3,7 @@ $secureCookie = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 session_set_cookie_params(['httponly' => true, 'secure' => $secureCookie, 'samesite' => 'Lax']);
 session_start();
 require_once __DIR__ . '/../config/CommunityService.php';
+require_once __DIR__ . '/../config/analytics.php';
 
 function e(?string $value): string { return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8'); }
 $service = new CommunityService();
@@ -35,6 +36,7 @@ foreach ($results as $result) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
     <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" integrity="sha256-p4NxAoJBhIINfQ6Lr5UVR8aG6N6au6M6F1eQSCV5p0A=" crossorigin="">
     <link href="assets/css/app.css" rel="stylesheet">
+<?php meu_terreiro_analytics_head(); ?>
 </head>
 <body class="mt-public-body">
 <nav class="navbar navbar-expand-lg mt-navbar navbar-dark">
@@ -80,6 +82,7 @@ foreach ($results as $result) {
 </main>
 <footer class="border-top bg-white py-4"><div class="container small text-muted">Dados exibidos somente com autorização de cada casa. Mapa: © <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap contributors</a>.</div></footer>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<?php meu_terreiro_analytics_consent_banner(); ?>
 <script>
 const useLocation = document.getElementById('useLocation');
 const geoStatus = document.getElementById('geoStatus');

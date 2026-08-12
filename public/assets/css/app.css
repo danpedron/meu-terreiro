@@ -112,3 +112,11 @@ textarea.form-control { min-height: 7.5rem; }
   .card, .form-control, .form-select { border-color: #5a3324; }
   .btn-primary { border-width: 2px; }
 }
+
+/* Consentimento opcional para medição de audiência. */
+.mt-analytics-consent { position: fixed; z-index: 1100; right: 1rem; bottom: 1rem; left: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; max-width: 920px; margin: 0 auto; padding: 1rem 1.1rem; border: 1px solid var(--mt-borda); border-radius: .9rem; background: rgba(255,253,248,.98); box-shadow: 0 .55rem 1.6rem rgba(50, 31, 20, .2); }
+.mt-analytics-consent__text { display: grid; gap: .2rem; color: var(--mt-texto); font-size: .88rem; line-height: 1.35; }
+.mt-analytics-consent__text strong { color: var(--mt-terra); }
+.mt-analytics-consent__text span { color: var(--mt-muted); }
+.mt-analytics-consent__actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
+@media (max-width: 767.98px) { .mt-analytics-consent { right: .65rem; bottom: 5.4rem; left: .65rem; align-items: stretch; flex-direction: column; gap: .75rem; padding: .9rem; } .mt-analytics-consent__actions { justify-content: stretch; } .mt-analytics-consent__actions .btn { flex: 1 1 10rem; } }
