@@ -19,7 +19,7 @@ $communityPages = ['comunidade','nova-casa','admin-global'];
 $page = (string) ($_GET['p'] ?? (isset($_SESSION['user_id']) ? 'comunidade' : 'login'));
 if (!in_array($page, array_merge($publicPages, $communityPages, $tenantPages), true)) { $page = isset($_SESSION['user_id']) ? 'comunidade' : 'login'; }
 if (!isset($_SESSION['user_id']) && !in_array($page, $publicPages, true)) { $page = 'login'; }
-if (isset($_SESSION['user_id']) && in_array($page, $publicPages, true)) { $page = 'comunidade'; }
+if (isset($_SESSION['user_id']) && in_array($page, ['login', 'cadastro'], true)) { $page = 'comunidade'; }
 if (isset($_SESSION['user_id']) && in_array($page, $tenantPages, true) && (empty($_SESSION['tenant_id']) || empty($_SESSION['tenant_slug']))) {
     $_SESSION['flash_error'] = 'Escolha uma casa com vínculo ativo antes de acessar a área interna.';
     $page = 'comunidade';
@@ -47,7 +47,7 @@ $seoDescription = $page === 'cadastro'
 <?php if ($analyticsPublic) { meu_terreiro_analytics_head(); } ?>
 </head><body>
 <a class="mt-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
-<?php if (!isset($_SESSION['user_id'])): ?>
+<?php if (!isset($_SESSION['user_id']) || $page === 'cadastrar-centro'): ?>
 <main class="mt-login-shell" id="conteudo-principal"><div class="container py-4 py-md-5"><div class="row justify-content-center"><div class="col-12 col-xl-10"><section class="row g-0 mt-access-card shadow-sm"><div class="col-12 col-md-5 mt-access-intro p-4 p-md-5"><span class="mt-stat-icon mb-4"><i class="fa-solid fa-hands-holding-circle fa-xl"></i></span><p class="mt-eyebrow text-white-50">Comunidade e cuidado</p><h1 class="display-6 fw-bold">Meu Terreiro</h1><p class="lead mb-4">Um lugar para pessoas encontrarem casas que desejam se apresentar publicamente e para cada casa organizar sua rotina com autonomia.</p><ul class="list-unstyled small mb-4"><li class="mb-2"><i class="fa-solid fa-map-location-dot me-2"></i>Busca por cidade ou localização consentida</li><li class="mb-2"><i class="fa-solid fa-user-shield me-2"></i>Participação aprovada por cada casa</li><li><i class="fa-solid fa-lock me-2"></i>Dados administrativos isolados por terreiro</li></ul><div class="d-grid gap-2 d-sm-flex"><a class="btn btn-outline-light" href="directory.php"><i class="fa-solid fa-compass me-2"></i>Explorar casas</a><a class="btn btn-light" href="?p=cadastrar-centro"><i class="fa-solid fa-house-circle-check me-2"></i>Cadastrar centro</a></div></div><div class="col-12 col-md-7 bg-white p-4 p-md-5">
 <?php if ($page === 'cadastrar-centro'): ?>
 <span class="mt-eyebrow">Cadastro público de centro</span><h2 class="h2 mt-page-title mb-2">Cadastrar um centro sem criar conta</h2><p class="mt-subtitle">Qualquer pessoa pode enviar o cadastro. A administração global analisa antes de publicar. Após a aprovação, o centro aparece no diretório por padrão e pode ser removido pela própria casa quando quiser.</p><?php if ($publicCenterSuccess): ?><div class="alert alert-success" role="status"><?php echo e($publicCenterSuccess); ?></div><?php endif; ?><?php if ($publicCenterError): ?><div class="alert alert-danger" role="alert"><?php echo e($publicCenterError); ?></div><?php endif; ?>

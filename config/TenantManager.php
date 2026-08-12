@@ -70,7 +70,7 @@ final class TenantManager
         if (!$aceitouTermos) {
             return ['error' => 'É necessário confirmar a responsabilidade pelo uso e a proteção dos dados.'];
         }
-        if ($slug === '' || strlen($slug) > 40) {
+        if ($slug === '' || strlen($slug) > 50) {
             return ['error' => 'Não foi possível criar um identificador seguro para este terreiro.'];
         }
 
@@ -173,7 +173,7 @@ final class TenantManager
         if (!$aceitouTermos) {
             return ['error' => 'Confirme que possui autorização para cadastrar a casa e proteger os dados informados.'];
         }
-        if ($slug === '' || strlen($slug) > 40) {
+        if ($slug === '' || strlen($slug) > 50) {
             return ['error' => 'Não foi possível criar um identificador seguro para esta casa.'];
         }
         $userStmt = $this->centralConn->prepare("SELECT id, nome, email FROM users WHERE id = ? AND status = 'Ativo' LIMIT 1");
@@ -305,7 +305,7 @@ final class TenantManager
         if (!filter_var($contactEmail, FILTER_VALIDATE_EMAIL)) {
             return ['error' => 'Informe um e-mail válido para retorno da administração global.'];
         }
-        if (mb_strlen($nomeTerreiro) < 3 || mb_strlen($nomeTerreiro) > 255 || $slug === '' || strlen($slug) > 40) {
+        if (mb_strlen($nomeTerreiro) < 3 || mb_strlen($nomeTerreiro) > 255 || $slug === '' || strlen($slug) > 50) {
             return ['error' => 'Informe o nome do centro com pelo menos 3 caracteres.'];
         }
         if (!$aceitouTermos) {
@@ -365,9 +365,19 @@ final class TenantManager
 
     private static function slugify(string $value): string
     {
-        $value = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value) ?: $value;
-        $value = strtolower($value);
-        $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?? '';
-        return trim($value, '-');
+        $original = trim($value);
+        $transliterated = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $original);
+        $value = strtolower($transliterated !== false ? $transliterated : $original);
+        $slug = trim((string) (preg_replace('/[^a-z0-9]+/', '-', $value) ?? ''), '-');
+
+        // O banco aceita 50 caracteres. Nomes longos recebem um sufixo curto
+        // derivado do nome original para preservar estabilidade e reduzir colisões.
+        if (strlen($slug) > 50) {
+            $slug = rtrim(substr($slug, 0, 43), '-') . '-' . substr(hash('sha256', $original), 0, 6);
+        }
+        if ($slug === '') {
+            $slug = 'centro-' . substr(hash('sha256', $original), 0, 12);
+        }
+        return substr($slug, 0, 50);
     }
 }
