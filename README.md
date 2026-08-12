@@ -2,7 +2,7 @@
 
 Plataforma administrativa web para organização de terreiros de Umbanda e comunidades afro-brasileiras. O projeto foi pensado para ser simples o suficiente para o uso cotidiano por dirigentes, regentes, secretários e pessoas mais velhas, sem abrir mão de uma base técnica preparada para evolução enterprise.
 
-> **Estado atual:** plataforma funcional em evolução. O repositório contém onboarding de novos terreiros, isolamento por banco, autenticação por perfis, dashboard, cadastros operacionais, agenda, obrigações, financeiro, estoque, compras, patrimônio, biblioteca, álbum de memória, locais de referência, registros internos de segurança e portabilidade autorizada de dados pessoais entre casas.
+> **Estado atual:** plataforma funcional em evolução. O repositório contém contas globais de participantes, criação comunitária de novas casas, isolamento por banco, diretório público por localização consentida, solicitações de vínculo e consulta, aprovação de dirigência, autenticação por perfis, módulos operacionais, estoque, financeiro, memória e portabilidade autorizada de dados pessoais entre casas.
 
 ## Visão do projeto
 
@@ -25,6 +25,9 @@ O sistema foi desenhado com uma linguagem visual inspirada em referências afro-
 | Locais e cuidado | Referências privadas para folhas, ervas, encruzilhadas e outros locais, com condição de acesso e restrição padrão. |
 | Segurança | Registro sigiloso de ocorrências, providências e contatos de apoio. |
 | Portabilidade | Exportação em JSON e importação controlada de cadastro, entidades e histórico de obrigações do próprio filho, com confirmação explícita, auditoria e isolamento entre bancos. |
+| Comunidade | Qualquer pessoa pode criar uma conta, criar uma casa, solicitar vínculo como consulente, assistência, filho de santo, Babalorixá ou Yalorixá e escolher uma casa aprovada para acessar. |
+| Diretório público | Busca por cidade ou localização consentida, página pública da casa, horários de gira, dirigente, informações de presença autorizadas, canais de contato e solicitação de consulta. |
+| Governança | Lideranças locais aprovam vínculos cotidianos. Pedidos de Babalorixá/Yalorixá em casa sem dirigente verificado seguem para a administração global, única com acesso de supervisão a todas as casas. |
 
 ## Arquitetura multi-tenant
 
@@ -32,8 +35,11 @@ Cada terreiro deve ser tratado como uma unidade independente. A arquitetura prop
 
 ```text
 meuterreiro_admin
-├── tenants       -> cadastro técnico dos terreiros
-└── users         -> usuários e papéis de acesso
+├── tenants                      -> cadastro técnico e perfil público opcional das casas
+├── users                        -> contas globais de participantes e administração global
+├── tenant_memberships           -> vínculos, papéis e fluxo de aprovação por casa
+├── tenant_consultation_requests -> pedidos de consulta com consentimento
+└── central_audit_log            -> trilha de auditoria da camada comunitária
 
 meuterreiro_<slug>
 ├── terreiro_info
@@ -115,6 +121,7 @@ Instalações já criadas antes da expansão devem aplicar as migrations primeir
 
 ```bash
 mysql -u root -p meuterreiro_admin < database/migrations/001_central_onboarding.sql
+mysql -u root -p meuterreiro_admin < database/migrations/002_comunidade_central.sql
 mysql -u root -p meuterreiro_principal < database/migrations/001_tenant_administracao.sql
 ```
 
@@ -150,13 +157,17 @@ Antes de aplicar qualquer alteração no Nginx de um servidor que hospede outros
 
 ## Primeiro acesso
 
-Após criar um usuário no banco central, abra o endereço configurado para a instalação e use a tela inicial do sistema. O endereço `public/auth.php` é um endpoint de formulário e deve ser acessado por `POST`; a entrada normal do usuário é `public/index.php`.
+A entrada normal do usuário é `public/index.php`. Qualquer pessoa pode criar uma conta global e, depois, solicitar vínculo a uma casa ou criar uma nova casa. A criação não concede dirigência automaticamente: pedidos de Babalorixá ou Yalorixá em uma casa sem dirigente verificado exigem liberação da administração global.
+
+O diretório público está em `public/directory.php`. A busca por geolocalização só é executada após ação explícita da pessoa e usa a posição somente naquela consulta; nenhuma coordenada da pessoa é persistida nem enviada às casas. Casas decidem se entram no diretório, quais dados exibem e se mostram localização aproximada ou detalhada.
 
 As credenciais iniciais não são fornecidas pelo repositório. Cada administrador deve criá-las durante a instalação e alterar qualquer senha temporária imediatamente.
 
 ## Segurança e privacidade
 
 O projeto lida potencialmente com CPF, endereço, telefone, datas pessoais, registros espirituais e informações financeiras. A LGPD classifica dados referentes à convicção religiosa como dados pessoais sensíveis, o que exige cuidados reforçados [5]. Por isso, uma instalação real deve aplicar HTTPS, controle de acesso por papel, backups criptografados, retenção mínima de dados, trilhas de auditoria e política de consentimento compatível com a legislação aplicável. A política pública nacional voltada a povos e comunidades tradicionais de terreiro reforça a importância da autonomia, da preservação de saberes e do enfrentamento à intolerância [6].
+
+O diretório usa [OpenStreetMap](https://www.openstreetmap.org/) por meio de mapa no navegador, com atribuição visível. A instalação deve respeitar a política pública de uso de tiles e considerar um provedor apropriado ou infraestrutura própria conforme a escala de acesso [7]. Nunca armazene a localização da pessoa que pesquisa sem finalidade clara e consentimento específico.
 
 Nunca faça commit de senhas, tokens, chaves privadas, dumps de banco, cookies, arquivos `.env`, logs de produção ou URLs internas. Antes de cada push, execute uma busca por padrões sensíveis e revise o diff:
 
@@ -215,3 +226,4 @@ Este projeto é distribuído sob a licença MIT. Consulte [LICENSE](LICENSE).
 [4]: https://www.php.net/manual/en/install.fpm.php "Documentação oficial do PHP-FPM"
 [5]: https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm "Lei Geral de Proteção de Dados Pessoais"
 [6]: https://www.gov.br/igualdaderacial/pt-br/assuntos/programas-e-projetos/politica-nacional-para-povos-e-comunidades-tradicionais-de-terreiro-e-matriz-africana "Política Nacional para Povos e Comunidades Tradicionais de Terreiro e de Matriz Africana"
+[7]: https://operations.osmfoundation.org/policies/tiles/ "Política de uso de tiles do OpenStreetMap"
