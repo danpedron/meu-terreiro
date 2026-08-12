@@ -173,6 +173,14 @@ Páginas de busca por cidade só recebem sinal de indexação quando retornam ca
 
 SEO e descoberta por IA não garantem posicionamento, citações ou recomendações. Para melhorar a relevância de uma casa, a liderança deve manter atualizados os dados que escolheu divulgar, escrever uma apresentação objetiva e solicitar links de fontes externas confiáveis, como página institucional, rede social oficial ou diretório comunitário — sem publicar endereço ou informação ritual que não queira tornar pública. Consulte também as orientações do [Google Search Central](https://developers.google.com/search/docs/fundamentals/seo-starter-guide) e as [Diretrizes para Webmasters do Bing](https://www.bing.com/webmasters/help/webmaster-guidelines-30fba23a).
 
+## Moderação global de centros
+
+A administração global possui controles separados para evitar que uma ação reversível seja confundida com exclusão definitiva. **Ocultar do diretório** remove a casa da busca e do mapa, mas preserva o acesso e os dados. **Suspender centro** retira a casa do diretório e impede a operação normal até que ela seja reativada. **Reativar e publicar** restaura um centro suspenso no diretório.
+
+A exclusão definitiva só pode ser feita pela administração global. O fluxo exige um motivo com pelo menos 10 caracteres e a digitação exata de `EXCLUIR <slug>`. Antes de remover o banco isolado, a aplicação cria um dump SQL compactado em diretório privado, registra o início da operação e mantém a casa em quarentena. A remoção central só é concluída depois que o banco isolado e o registro do tenant são removidos; falhas preservam o centro em estado inativo e registram a ocorrência na auditoria.
+
+Backups de exclusão devem ter permissões restritas, retenção definida e proteção operacional compatível com a política da instalação. A exclusão definitiva não deve ser usada para uma simples retirada do diretório.
+
 ## Segurança e privacidade
 
 O projeto lida potencialmente com CPF, endereço, telefone, datas pessoais, registros espirituais e informações financeiras. A LGPD classifica dados referentes à convicção religiosa como dados pessoais sensíveis, o que exige cuidados reforçados [5]. Por isso, uma instalação real deve aplicar HTTPS, controle de acesso por papel, backups criptografados, retenção mínima de dados, trilhas de auditoria e política de consentimento compatível com a legislação aplicável. A política pública nacional voltada a povos e comunidades tradicionais de terreiro reforça a importância da autonomia, da preservação de saberes e do enfrentamento à intolerância [6].

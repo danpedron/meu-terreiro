@@ -409,6 +409,91 @@ final class CommunityService
         }
     }
 
+    /**
+     * Moderação exclusiva da administração global.
+     * Ocultar/publicar novamente e suspender/reativar são reversíveis.
+     * A exclusão definitiva exige backup, motivo e a frase EXCLUIR <slug>.
+     */
+    public function moderateTenant(int $actorId, int $tenantId, string $action, string $reason = '', string $confirmation = ''): array
+    {
+        if (!$this->isGlobalAdmin($actorId)) {
+            return ['error' => 'Somente a administração global pode moderar centros.'];
+        }
+
+        $allowed = ['hide', 'publish', 'suspend', 'reactivate', 'delete'];
+        if (!in_array($action, $allowed, true)) {
+            return ['error' => 'Ação de moderação inválida.'];
+        }
+
+        $stmt = $this->db->prepare(
+            'SELECT id, slug, db_name, nome_exibicao, status, listar_publicamente FROM tenants WHERE id = ? LIMIT 1'
+        );
+        $stmt->execute([$tenantId]);
+        $tenant = $stmt->fetch();
+        if (!$tenant) {
+            return ['error' => 'Centro não encontrado.'];
+        }
+
+        $reason = trim(mb_substr($reason, 0, 1000));
+        $tenantName = (string) $tenant['nome_exibicao'];
+        $slug = (string) $tenant['slug'];
+
+        if ($action === 'delete') {
+            if (strlen($reason) < 10) {
+                return ['error' => 'Informe um motivo com pelo menos 10 caracteres para a exclusão.'];
+            }
+            $expected = 'EXCLUIR ' . $slug;
+            if (!hash_equals($expected, trim($confirmation))) {
+                return ['error' => 'Para confirmar, digite exatamente: ' . $expected];
+            }
+
+            try {
+                $backupPath = $this->backupTenantDatabase((string) $tenant['db_name'], $slug);
+                $quarantine = $this->db->prepare("UPDATE tenants SET status = 'Inativo', listar_publicamente = 0, mostrar_no_mapa = 0 WHERE id = ?");
+                $quarantine->execute([$tenantId]);
+                $this->log($actorId, $tenantId, 'centro_exclusao_iniciada', 'tenants', $tenantId, 'Backup: ' . basename($backupPath) . '. Motivo: ' . ($reason ?: 'não informado'));
+                $this->dropTenantDatabase((string) $tenant['db_name']);
+
+                $delete = $this->db->prepare('DELETE FROM tenants WHERE id = ?');
+                $delete->execute([$tenantId]);
+                if ($delete->rowCount() !== 1) {
+                    throw new RuntimeException('O registro central não foi removido após a exclusão do banco.');
+                }
+                $this->log($actorId, null, 'centro_excluido_definitivamente', 'tenants', $tenantId, 'Centro: ' . $tenantName . ' (' . $slug . '). Backup: ' . basename($backupPath) . '. Motivo: ' . $reason);
+                return ['status' => 'deleted', 'tenant_id' => $tenantId, 'nome_exibicao' => $tenantName, 'backup' => $backupPath];
+            } catch (Throwable $e) {
+                error_log('Falha na exclusão definitiva do tenant ' . $tenantId . ': ' . $e->getMessage());
+                try {
+                    $this->log($actorId, $tenantId, 'centro_exclusao_falhou', 'tenants', $tenantId, mb_substr($e->getMessage(), 0, 900));
+                } catch (Throwable $auditError) {
+                    error_log('Falha ao registrar auditoria de exclusão: ' . $auditError->getMessage());
+                }
+                return ['error' => 'A exclusão não foi concluída. O centro foi retirado do diretório para análise e o erro foi registrado.'];
+            }
+        }
+
+        $sql = match ($action) {
+            'hide' => "UPDATE tenants SET listar_publicamente = 0, mostrar_no_mapa = 0 WHERE id = ?",
+            'publish' => "UPDATE tenants SET status = 'Ativo', listar_publicamente = 1 WHERE id = ? AND status = 'Ativo'",
+            'suspend' => "UPDATE tenants SET status = 'Suspenso', listar_publicamente = 0, mostrar_no_mapa = 0 WHERE id = ?",
+            'reactivate' => "UPDATE tenants SET status = 'Ativo', listar_publicamente = 1, cadastro_publico_pendente = 0 WHERE id = ? AND status = 'Suspenso'",
+        };
+        $update = $this->db->prepare($sql);
+        $update->execute([$tenantId]);
+        if ($update->rowCount() < 1) {
+            return ['error' => 'A ação não se aplica ao estado atual deste centro.'];
+        }
+
+        $labels = [
+            'hide' => 'centro_ocultado_do_diretorio',
+            'publish' => 'centro_publicado_no_diretorio',
+            'suspend' => 'centro_suspenso',
+            'reactivate' => 'centro_reativado',
+        ];
+        $this->log($actorId, $tenantId, $labels[$action], 'tenants', $tenantId, $reason ?: 'Ação de moderação global.');
+        return ['status' => $action, 'tenant_id' => $tenantId, 'nome_exibicao' => $tenantName];
+    }
+
     public function listTenantsForGlobalAdmin(int $limit = 100): array
     {
         $limit = max(1, min($limit, 100));
@@ -420,6 +505,62 @@ final class CommunityService
              FROM tenants t ORDER BY t.created_at DESC LIMIT $limit"
         );
         return $stmt->fetchAll();
+    }
+
+    private function backupTenantDatabase(string $dbName, string $slug): string
+    {
+        if (!function_exists('exec')) {
+            throw new RuntimeException('A função de backup não está disponível no PHP.');
+        }
+        $directory = defined('MEUTERREIRO_BACKUP_DIR') ? MEUTERREIRO_BACKUP_DIR : (__DIR__ . '/../storage/backups');
+        if (!is_dir($directory) && !@mkdir($directory, 0700, true) && !is_dir($directory)) {
+            throw new RuntimeException('Não foi possível criar o diretório privado de backups.');
+        }
+        if (!is_writable($directory)) {
+            throw new RuntimeException('O diretório privado de backups não permite gravação.');
+        }
+
+        $safeSlug = preg_replace('/[^a-zA-Z0-9_-]+/', '_', $slug) ?: 'centro';
+        $dumpPath = rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'tenant_' . $safeSlug . '_' . gmdate('Ymd_His') . '.sql';
+        $credentialsPath = tempnam(sys_get_temp_dir(), 'meuterreiro-db-');
+        if ($credentialsPath === false) {
+            throw new RuntimeException('Não foi possível preparar o backup privado.');
+        }
+        $credentials = "[client]\nhost=" . CENTRAL_DB_HOST . "\nuser=" . CENTRAL_DB_USER . "\npassword=" . CENTRAL_DB_PASS . "\n";
+        if (file_put_contents($credentialsPath, $credentials) === false) {
+            @unlink($credentialsPath);
+            throw new RuntimeException('Não foi possível preparar as credenciais temporárias do backup.');
+        }
+        @chmod($credentialsPath, 0600);
+
+        $command = 'mariadb-dump --defaults-extra-file=' . escapeshellarg($credentialsPath)
+            . ' --single-transaction --routines --events --triggers --hex-blob --no-tablespaces '
+            . escapeshellarg($dbName) . ' > ' . escapeshellarg($dumpPath) . ' 2>&1';
+        $output = [];
+        $exitCode = 1;
+        exec($command, $output, $exitCode);
+        @unlink($credentialsPath);
+        if ($exitCode !== 0 || !is_file($dumpPath) || filesize($dumpPath) < 1) {
+            @unlink($dumpPath);
+            throw new RuntimeException('O dump do banco isolado falhou: ' . mb_substr(implode(' ', $output), 0, 300));
+        }
+
+        $gzipOutput = [];
+        $gzipExit = 1;
+        exec('gzip -f ' . escapeshellarg($dumpPath) . ' 2>&1', $gzipOutput, $gzipExit);
+        if ($gzipExit !== 0 || !is_file($dumpPath . '.gz')) {
+            @unlink($dumpPath);
+            throw new RuntimeException('A compactação do backup falhou.');
+        }
+        @chmod($dumpPath . '.gz', 0600);
+        return $dumpPath . '.gz';
+    }
+
+    private function dropTenantDatabase(string $dbName): void
+    {
+        $safeDbName = str_replace('`', '``', $dbName);
+        $provisioner = ProvisionerDB::getConnection();
+        $provisioner->exec('DROP DATABASE IF EXISTS `' . $safeDbName . '`');
     }
 
     public function listConsultationRequests(int $actorId, int $tenantId): array
