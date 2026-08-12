@@ -1,5 +1,58 @@
 # Meu Terreiro: somente conteúdo explicitamente público é rastreável.
-# Esta política se aplica igualmente a buscadores e a agentes de resposta que respeitem robots.txt.
+# OAI-SearchBot pode consultar páginas públicas para respostas de busca.
+# GPTBot permanece bloqueado por padrão, pois busca e treinamento são finalidades distintas.
+
+User-agent: Googlebot
+Allow: /meuterreiro/public/sobre.php
+Allow: /meuterreiro/public/directory.php
+Allow: /meuterreiro/public/terreiro.php
+Allow: /meuterreiro/public/sitemap.php
+Allow: /meuterreiro/public/llms.txt
+Disallow: /meuterreiro/public/index.php
+Disallow: /meuterreiro/public/auth.php
+Disallow: /meuterreiro/public/account_register.php
+Disallow: /meuterreiro/public/register.php
+Disallow: /meuterreiro/public/membership_request.php
+Disallow: /meuterreiro/public/membership_decision.php
+Disallow: /meuterreiro/public/consultation_request.php
+Disallow: /meuterreiro/public/tenant_create.php
+Disallow: /meuterreiro/public/select_tenant.php
+
+User-agent: Bingbot
+Allow: /meuterreiro/public/sobre.php
+Allow: /meuterreiro/public/directory.php
+Allow: /meuterreiro/public/terreiro.php
+Allow: /meuterreiro/public/sitemap.php
+Allow: /meuterreiro/public/llms.txt
+Disallow: /meuterreiro/public/index.php
+Disallow: /meuterreiro/public/auth.php
+Disallow: /meuterreiro/public/account_register.php
+Disallow: /meuterreiro/public/register.php
+Disallow: /meuterreiro/public/membership_request.php
+Disallow: /meuterreiro/public/membership_decision.php
+Disallow: /meuterreiro/public/consultation_request.php
+Disallow: /meuterreiro/public/tenant_create.php
+Disallow: /meuterreiro/public/select_tenant.php
+
+User-agent: OAI-SearchBot
+Allow: /meuterreiro/public/sobre.php
+Allow: /meuterreiro/public/directory.php
+Allow: /meuterreiro/public/terreiro.php
+Allow: /meuterreiro/public/sitemap.php
+Allow: /meuterreiro/public/llms.txt
+Disallow: /meuterreiro/public/index.php
+Disallow: /meuterreiro/public/auth.php
+Disallow: /meuterreiro/public/account_register.php
+Disallow: /meuterreiro/public/register.php
+Disallow: /meuterreiro/public/membership_request.php
+Disallow: /meuterreiro/public/membership_decision.php
+Disallow: /meuterreiro/public/consultation_request.php
+Disallow: /meuterreiro/public/tenant_create.php
+Disallow: /meuterreiro/public/select_tenant.php
+
+User-agent: GPTBot
+Disallow: /
+
 User-agent: *
 Allow: /meuterreiro/public/sobre.php
 Allow: /meuterreiro/public/directory.php
