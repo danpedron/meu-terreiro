@@ -54,7 +54,7 @@ final class CommunityService
     public function getTenantForPublicDirectory(string $slug): ?array
     {
         $stmt = $this->db->prepare(
-            "SELECT id, slug, nome_exibicao, descricao_publica, nacao_publica, dirigente_publico, dirigente_status,
+            "SELECT id, slug, db_name, nome_exibicao, descricao_publica, nacao_publica, dirigente_publico, dirigente_status,
                     linha_presenca_publica, horarios_publicos, whatsapp_publico, email_publico, aceita_consultas,
                     aceita_solicitacoes_vinculo, localizacao_publica, endereco_publico, bairro_publico, cidade_publica,
                     estado_publico, latitude_publica, longitude_publica, mostrar_no_mapa
@@ -63,7 +63,26 @@ final class CommunityService
              LIMIT 1"
         );
         $stmt->execute([$slug]);
-        return $stmt->fetch() ?: null;
+        $tenant = $stmt->fetch();
+        if (!$tenant) {
+            return null;
+        }
+        $tenant['filhos_ativos'] = $this->countActiveChildren((string) ($tenant['db_name'] ?? ''));
+        return $tenant;
+    }
+
+    private function countActiveChildren(string $databaseName): int
+    {
+        if (!preg_match('/^meuterreiro_[a-z0-9-]+$/', $databaseName)) {
+            return 0;
+        }
+        try {
+            $tenantDb = database_connection($databaseName, CENTRAL_DB_USER, CENTRAL_DB_PASS);
+            return (int) $tenantDb->query("SELECT COUNT(*) FROM filhos WHERE status = 'Ativo'")->fetchColumn();
+        } catch (Throwable $e) {
+            error_log('Não foi possível calcular o total público de filhos: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     public function findPublicTenants(?float $latitude = null, ?float $longitude = null, ?string $city = null, int $radiusKm = 25, ?string $state = null): array

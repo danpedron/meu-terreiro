@@ -21,8 +21,12 @@ CREATE TABLE IF NOT EXISTS terreiro_detalhes (
     cidade VARCHAR(120) NULL,
     estado CHAR(2) NULL,
     telefone VARCHAR(30) NULL,
+    whatsapp VARCHAR(20) NULL,
     email_contato VARCHAR(255) NULL,
     endereco_publico TEXT NULL,
+    numero_publico VARCHAR(30) NULL,
+    bairro_publico VARCHAR(120) NULL,
+    horarios_funcionamento TEXT NULL,
     politica_privacidade TEXT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

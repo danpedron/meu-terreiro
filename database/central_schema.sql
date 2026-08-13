@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     solicitante_cadastro_nome VARCHAR(255) NULL,
     endereco_publico VARCHAR(255) NULL,
     bairro_publico VARCHAR(120) NULL,
+    numero_publico VARCHAR(30) NULL,
     cidade_publica VARCHAR(120) NULL,
     estado_publico CHAR(2) NULL,
     latitude_publica DECIMAL(10,7) NULL,

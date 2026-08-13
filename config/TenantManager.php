@@ -213,18 +213,18 @@ final class TenantManager
 
             $this->centralConn->beginTransaction();
             $tenantStmt = $this->centralConn->prepare(
-                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, dirigente_status, listar_publicamente, mostrar_no_mapa, localizacao_publica, cadastro_publico_pendente, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, aceita_solicitacoes_vinculo)
-                 VALUES (?, ?, ?, ?, 'Ativo', 'Em configuração', NOW(), 'Sem dirigente', 1, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, 1)"
+                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, dirigente_status, listar_publicamente, mostrar_no_mapa, localizacao_publica, cadastro_publico_pendente, endereco_publico, bairro_publico, numero_publico, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, whatsapp_publico, aceita_solicitacoes_vinculo)
+                 VALUES (?, ?, ?, ?, 'Ativo', 'Em configuração', NOW(), 'Sem dirigente', 1, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
             );
-            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $responsibleEmail !== '' ? $responsibleEmail : null, $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos']]);
+            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $responsibleEmail !== '' ? $responsibleEmail : null, $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $profile['endereco_publico'], $profile['bairro_publico'], $profile['numero_publico'], $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos'], $profile['whatsapp_publico']]);
             $tenantId = (int) $this->centralConn->lastInsertId();
             $this->log($actorId, $tenantId, 'cadastro_global_centro', 'tenants', $tenantId, 'Casa criada pelo AdminGlobal sem vínculo automático.');
             $this->centralConn->commit();
 
             $infoStmt = $tenantConn->prepare('INSERT INTO terreiro_info (nome, fundacao, nacao, babalorixa, yalorixa) VALUES (?, ?, ?, ?, ?)');
             $infoStmt->execute([$nomeTerreiro, $fundacao ?: null, $nacao ?: null, null, null]);
-            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, email_contato) VALUES (?, ?, ?, ?)');
-            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $responsibleEmail !== '' ? $responsibleEmail : null]);
+            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, whatsapp, email_contato, endereco_publico, numero_publico, bairro_publico, horarios_funcionamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['whatsapp_publico'], $responsibleEmail !== '' ? $responsibleEmail : null, $profile['endereco_publico'], $profile['numero_publico'], $profile['bairro_publico'], $profile['horarios_publicos']]);
             return ['tenant_id' => $tenantId, 'slug' => $slug];
         } catch (Throwable $e) {
             if ($this->centralConn->inTransaction()) {
@@ -378,6 +378,10 @@ final class TenantManager
             'longitude_publica' => $longitude,
             'mostrar_no_mapa' => $latitude !== null ? 1 : 0,
             'localizacao_publica' => $latitude !== null ? 'Aproximada' : 'Bairro',
+            'endereco_publico' => $clean('endereco_publico', 255),
+            'numero_publico' => $clean('numero_publico', 30),
+            'bairro_publico' => $clean('bairro_publico', 120),
+            'whatsapp_publico' => $clean('whatsapp_publico', 20),
             'descricao_publica' => $clean('descricao_publica'),
             'nacao_publica' => $clean('nacao_publica', 120) ?: (trim($fallbackNation) ?: null),
             'horarios_publicos' => $clean('horarios_publicos'),

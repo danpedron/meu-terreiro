@@ -33,10 +33,14 @@ $old = [
     'fundacao' => trim((string) ($_POST['fundacao'] ?? '')),
     'cidade_publica' => trim((string) ($_POST['cidade_publica'] ?? '')),
     'estado_publico' => strtoupper(trim((string) ($_POST['estado_publico'] ?? ''))),
+    'endereco_publico' => trim((string) ($_POST['endereco_publico'] ?? '')),
+    'numero_publico' => trim((string) ($_POST['numero_publico'] ?? '')),
+    'bairro_publico' => trim((string) ($_POST['bairro_publico'] ?? '')),
     'latitude_publica' => trim((string) ($_POST['latitude_publica'] ?? '')),
     'longitude_publica' => trim((string) ($_POST['longitude_publica'] ?? '')),
     'descricao_publica' => trim((string) ($_POST['descricao_publica'] ?? '')),
     'horarios_publicos' => trim((string) ($_POST['horarios_publicos'] ?? '')),
+    'whatsapp_publico' => trim((string) ($_POST['whatsapp_publico'] ?? '')),
     'email_responsavel' => mb_strtolower(trim((string) ($_POST['email_responsavel'] ?? ''))),
 ];
 
