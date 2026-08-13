@@ -147,6 +147,102 @@ final class TenantManager
     }
 
     /**
+     * Cria uma casa pelo AdminGlobal sem criar vínculo automático com qualquer usuário.
+     * O AdminGlobal continuará podendo abrir a casa pelo bypass administrativo existente,
+     * mas não será registrado como colaborador, dirigente ou participante.
+     *
+     * @return array{tenant_id:int,slug:string}|array{error:string}
+     */
+    public function createTenantForGlobalAdmin(
+        int $actorId,
+        string $nomeTerreiro,
+        string $nacao,
+        ?string $fundacao,
+        bool $aceitouTermos,
+        array $publicProfile = [],
+        ?string $responsibleEmail = null
+    ): array {
+        $nomeTerreiro = trim($nomeTerreiro);
+        $nacao = trim($nacao);
+        $responsibleEmail = mb_strtolower(trim((string) $responsibleEmail));
+        $slug = self::slugify($nomeTerreiro);
+
+        if ($actorId <= 0 || mb_strlen($nomeTerreiro) < 3 || mb_strlen($nomeTerreiro) > 255) {
+            return ['error' => 'Informe o nome da casa com pelo menos 3 caracteres.'];
+        }
+        if (!$aceitouTermos) {
+            return ['error' => 'Confirme que possui autorização para cadastrar a casa e proteger os dados informados.'];
+        }
+        if ($responsibleEmail !== '' && !filter_var($responsibleEmail, FILTER_VALIDATE_EMAIL)) {
+            return ['error' => 'Informe um e-mail válido para contato da casa ou deixe o campo vazio.'];
+        }
+        if ($slug === '' || strlen($slug) > 50) {
+            return ['error' => 'Não foi possível criar um identificador seguro para esta casa.'];
+        }
+        $actorStmt = $this->centralConn->prepare("SELECT id FROM users WHERE id = ? AND status = 'Ativo' AND global_role = 'AdminGlobal' LIMIT 1");
+        $actorStmt->execute([$actorId]);
+        if (!$actorStmt->fetchColumn()) {
+            return ['error' => 'Apenas o administrador global pode cadastrar uma casa por este fluxo.'];
+        }
+        $profile = $this->normalizePublicProfile($publicProfile, $nacao);
+        if (isset($profile['error'])) {
+            return ['error' => $profile['error']];
+        }
+
+        $dbName = 'meuterreiro_' . $slug;
+        $existing = $this->centralConn->prepare('SELECT id FROM tenants WHERE slug = ? OR db_name = ? LIMIT 1');
+        $existing->execute([$slug, $dbName]);
+        if ($existing->fetch()) {
+            return ['error' => 'Já existe uma casa com esse identificador. Ajuste o nome informado.'];
+        }
+        $schemaPath = __DIR__ . '/../database/terreiro_schema.sql';
+        if (!is_readable($schemaPath)) {
+            error_log('Schema do tenant não encontrado: ' . $schemaPath);
+            return ['error' => 'Não foi possível preparar a estrutura da nova casa.'];
+        }
+
+        $databaseCreated = false;
+        $provisionerConn = null;
+        try {
+            $provisionerConn = ProvisionerDB::getConnection();
+            $provisionerConn->exec("CREATE DATABASE `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            $databaseCreated = true;
+            $provisionedTenantConn = database_connection($dbName, PROVISIONER_DB_USER, PROVISIONER_DB_PASS);
+            $provisionedTenantConn->exec((string) file_get_contents($schemaPath));
+            $tenantConn = database_connection($dbName, CENTRAL_DB_USER, CENTRAL_DB_PASS);
+
+            $this->centralConn->beginTransaction();
+            $tenantStmt = $this->centralConn->prepare(
+                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, dirigente_status, listar_publicamente, mostrar_no_mapa, localizacao_publica, cadastro_publico_pendente, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, aceita_solicitacoes_vinculo)
+                 VALUES (?, ?, ?, ?, 'Ativo', 'Em configuração', NOW(), 'Sem dirigente', 1, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, 1)"
+            );
+            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $responsibleEmail !== '' ? $responsibleEmail : null, $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos']]);
+            $tenantId = (int) $this->centralConn->lastInsertId();
+            $this->log($actorId, $tenantId, 'cadastro_global_centro', 'tenants', $tenantId, 'Casa criada pelo AdminGlobal sem vínculo automático.');
+            $this->centralConn->commit();
+
+            $infoStmt = $tenantConn->prepare('INSERT INTO terreiro_info (nome, fundacao, nacao, babalorixa, yalorixa) VALUES (?, ?, ?, ?, ?)');
+            $infoStmt->execute([$nomeTerreiro, $fundacao ?: null, $nacao ?: null, null, null]);
+            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, email_contato) VALUES (?, ?, ?, ?)');
+            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $responsibleEmail !== '' ? $responsibleEmail : null]);
+            return ['tenant_id' => $tenantId, 'slug' => $slug];
+        } catch (Throwable $e) {
+            if ($this->centralConn->inTransaction()) {
+                $this->centralConn->rollBack();
+            }
+            if ($databaseCreated && $provisionerConn instanceof PDO) {
+                try {
+                    $provisionerConn->exec("DROP DATABASE IF EXISTS `$dbName`");
+                } catch (Throwable $cleanupError) {
+                    error_log('Falha ao limpar banco do cadastro global: ' . $cleanupError->getMessage());
+                }
+            }
+            error_log('Falha ao criar tenant pelo AdminGlobal: ' . $e->getMessage());
+            return ['error' => 'Não foi possível concluir o cadastro agora. Tente novamente ou contate a administração.'];
+        }
+    }
+
+    /**
      * Cria uma casa para uma conta global já autenticada. A criação da casa não
      * concede liderança automaticamente: pedidos de Babalorixá/Yalorixá ficam
      * pendentes para análise do administrador global.
