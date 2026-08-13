@@ -463,6 +463,14 @@ final class TenantManager
         }
     }
 
+    private function log(?int $actorId, ?int $tenantId, string $action, ?string $referenceType = null, ?int $referenceId = null, ?string $details = null): void
+    {
+        $stmt = $this->centralConn->prepare(
+            'INSERT INTO central_audit_log (actor_user_id, tenant_id, action, reference_type, reference_id, details) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$actorId, $tenantId, $action, $referenceType, $referenceId, $details]);
+    }
+
     private static function slugify(string $value): string
     {
         $original = trim($value);
