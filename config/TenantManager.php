@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/db_config.php';
+require_once __DIR__ . '/LogoStorage.php';
 
 final class TenantManager
 {
@@ -160,7 +161,8 @@ final class TenantManager
         ?string $fundacao,
         bool $aceitouTermos,
         array $publicProfile = [],
-        ?string $responsibleEmail = null
+        ?string $responsibleEmail = null,
+        ?array $logoUpload = null
     ): array {
         $nomeTerreiro = trim($nomeTerreiro);
         $nacao = trim($nacao);
@@ -203,7 +205,9 @@ final class TenantManager
 
         $databaseCreated = false;
         $provisionerConn = null;
+        $storedLogo = null;
         try {
+            $storedLogo = LogoStorage::store($logoUpload);
             $provisionerConn = ProvisionerDB::getConnection();
             $provisionerConn->exec("CREATE DATABASE `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             $databaseCreated = true;
@@ -213,18 +217,18 @@ final class TenantManager
 
             $this->centralConn->beginTransaction();
             $tenantStmt = $this->centralConn->prepare(
-                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, dirigente_status, listar_publicamente, mostrar_no_mapa, localizacao_publica, cadastro_publico_pendente, endereco_publico, bairro_publico, numero_publico, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, whatsapp_publico, aceita_solicitacoes_vinculo)
-                 VALUES (?, ?, ?, ?, 'Ativo', 'Em configuração', NOW(), 'Sem dirigente', 1, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
+                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, dirigente_status, listar_publicamente, mostrar_no_mapa, localizacao_publica, cadastro_publico_pendente, endereco_publico, bairro_publico, numero_publico, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, whatsapp_publico, logo_publico, aceita_solicitacoes_vinculo)
+                 VALUES (?, ?, ?, ?, 'Ativo', 'Em configuração', NOW(), 'Sem dirigente', 1, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
             );
-            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $responsibleEmail !== '' ? $responsibleEmail : null, $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $profile['endereco_publico'], $profile['bairro_publico'], $profile['numero_publico'], $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos'], $profile['whatsapp_publico']]);
+            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $responsibleEmail !== '' ? $responsibleEmail : null, $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $profile['endereco_publico'], $profile['bairro_publico'], $profile['numero_publico'], $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos'], $profile['whatsapp_publico'], $storedLogo['path'] ?? null]);
             $tenantId = (int) $this->centralConn->lastInsertId();
             $this->log($actorId, $tenantId, 'cadastro_global_centro', 'tenants', $tenantId, 'Casa criada pelo AdminGlobal sem vínculo automático.');
             $this->centralConn->commit();
 
             $infoStmt = $tenantConn->prepare('INSERT INTO terreiro_info (nome, fundacao, nacao, babalorixa, yalorixa) VALUES (?, ?, ?, ?, ?)');
             $infoStmt->execute([$nomeTerreiro, $fundacao ?: null, $nacao ?: null, null, null]);
-            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, whatsapp, email_contato, endereco_publico, numero_publico, bairro_publico, horarios_funcionamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['whatsapp_publico'], $responsibleEmail !== '' ? $responsibleEmail : null, $profile['endereco_publico'], $profile['numero_publico'], $profile['bairro_publico'], $profile['horarios_publicos']]);
+            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, whatsapp, email_contato, endereco_publico, numero_publico, bairro_publico, horarios_funcionamento, logo_publico) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['whatsapp_publico'], $responsibleEmail !== '' ? $responsibleEmail : null, $profile['endereco_publico'], $profile['numero_publico'], $profile['bairro_publico'], $profile['horarios_publicos'], $storedLogo['path'] ?? null]);
             return ['tenant_id' => $tenantId, 'slug' => $slug];
         } catch (Throwable $e) {
             if ($this->centralConn->inTransaction()) {
@@ -237,6 +241,7 @@ final class TenantManager
                     error_log('Falha ao limpar banco do cadastro global: ' . $cleanupError->getMessage());
                 }
             }
+            if ($storedLogo !== null) { LogoStorage::delete($storedLogo['path']); }
             error_log('Falha ao criar tenant pelo AdminGlobal: ' . $e->getMessage());
             return ['error' => 'Não foi possível concluir o cadastro agora. Tente novamente ou contate a administração.'];
         }
@@ -256,7 +261,8 @@ final class TenantManager
         ?string $fundacao,
         string $roleRequested,
         bool $aceitouTermos,
-        array $publicProfile = []
+        array $publicProfile = [],
+        ?array $logoUpload = null
     ): array {
         $nomeTerreiro = trim($nomeTerreiro);
         $nacao = trim($nacao);
@@ -297,7 +303,9 @@ final class TenantManager
 
         $databaseCreated = false;
         $provisionerConn = null;
+        $storedLogo = null;
         try {
+            $storedLogo = LogoStorage::store($logoUpload);
             $provisionerConn = ProvisionerDB::getConnection();
             $provisionerConn->exec("CREATE DATABASE `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             $databaseCreated = true;
@@ -307,10 +315,10 @@ final class TenantManager
 
             $this->centralConn->beginTransaction();
             $tenantStmt = $this->centralConn->prepare(
-                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, dirigente_status, listar_publicamente, mostrar_no_mapa, localizacao_publica, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, aceita_solicitacoes_vinculo)
-                 VALUES (?, ?, ?, ?, 'Ativo', 'Em configuração', NOW(), 'Sem dirigente', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
+                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, dirigente_status, listar_publicamente, mostrar_no_mapa, localizacao_publica, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, logo_publico, aceita_solicitacoes_vinculo)
+                 VALUES (?, ?, ?, ?, 'Ativo', 'Em configuração', NOW(), 'Sem dirigente', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
             );
-            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $user['email'], $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos']]);
+            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $user['email'], $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos'], $storedLogo['path'] ?? null]);
             $tenantId = (int) $this->centralConn->lastInsertId();
             $membershipStatus = $roleRequested === 'Colaborador' ? 'Ativo' : 'PendenteAdminGlobal';
             $membershipStmt = $this->centralConn->prepare(
@@ -330,8 +338,8 @@ final class TenantManager
 
             $infoStmt = $tenantConn->prepare('INSERT INTO terreiro_info (nome, fundacao, nacao, babalorixa, yalorixa) VALUES (?, ?, ?, ?, ?)');
             $infoStmt->execute([$nomeTerreiro, $fundacao ?: null, $nacao ?: null, null, null]);
-            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, email_contato) VALUES (?, ?, ?, ?)');
-            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $user['email']]);
+            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, whatsapp, email_contato, endereco_publico, numero_publico, bairro_publico, horarios_funcionamento, logo_publico) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['whatsapp_publico'], $user['email'], $profile['endereco_publico'], $profile['numero_publico'], $profile['bairro_publico'], $profile['horarios_publicos'], $storedLogo['path'] ?? null]);
             return ['tenant_id' => $tenantId, 'slug' => $slug, 'leadership_pending' => $membershipStatus === 'PendenteAdminGlobal'];
         } catch (Throwable $e) {
             if ($this->centralConn->inTransaction()) {
@@ -344,6 +352,7 @@ final class TenantManager
                     error_log('Falha ao limpar banco de tenant: ' . $cleanupError->getMessage());
                 }
             }
+            if ($storedLogo !== null) { LogoStorage::delete($storedLogo['path']); }
             error_log('Falha ao criar tenant por conta global: ' . $e->getMessage());
             return ['error' => 'Não foi possível concluir o cadastro agora. Tente novamente ou contate a administração.'];
         }
@@ -392,7 +401,7 @@ final class TenantManager
      * Permite iniciar um cadastro de centro sem criar conta. O registro fica
      * suspenso e invisível até uma decisão explícita da administração global.
      */
-    public function createPublicTenantSubmission(string $contactName, string $contactEmail, string $nomeTerreiro, string $nacao, ?string $fundacao, array $publicProfile, bool $aceitouTermos): array
+    public function createPublicTenantSubmission(string $contactName, string $contactEmail, string $nomeTerreiro, string $nacao, ?string $fundacao, array $publicProfile, bool $aceitouTermos, ?array $logoUpload = null): array
     {
         $contactName = trim($contactName);
         $contactEmail = mb_strtolower(trim($contactEmail));
@@ -428,7 +437,9 @@ final class TenantManager
         }
         $databaseCreated = false;
         $provisionerConn = null;
+        $storedLogo = null;
         try {
+            $storedLogo = LogoStorage::store($logoUpload);
             $provisionerConn = ProvisionerDB::getConnection();
             $provisionerConn->exec("CREATE DATABASE `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             $databaseCreated = true;
@@ -438,18 +449,18 @@ final class TenantManager
 
             $this->centralConn->beginTransaction();
             $tenantStmt = $this->centralConn->prepare(
-                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, listar_publicamente, mostrar_no_mapa, localizacao_publica, cadastro_publico_pendente, solicitante_cadastro_nome, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, aceita_solicitacoes_vinculo)
-                 VALUES (?, ?, ?, ?, 'Suspenso', 'Em configuração', NOW(), 1, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
+                "INSERT INTO tenants (slug, db_name, nome_exibicao, email_responsavel, status, onboarding_status, termos_aceitos_em, listar_publicamente, mostrar_no_mapa, localizacao_publica, cadastro_publico_pendente, solicitante_cadastro_nome, endereco_publico, numero_publico, bairro_publico, cidade_publica, estado_publico, latitude_publica, longitude_publica, descricao_publica, nacao_publica, horarios_publicos, whatsapp_publico, logo_publico, aceita_solicitacoes_vinculo)
+                 VALUES (?, ?, ?, ?, 'Suspenso', 'Em configuração', NOW(), 1, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
             );
-            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $contactEmail, $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $contactName, $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos']]);
+            $tenantStmt->execute([$slug, $dbName, $nomeTerreiro, $contactEmail, $profile['mostrar_no_mapa'], $profile['localizacao_publica'], $contactName, $profile['endereco_publico'], $profile['numero_publico'], $profile['bairro_publico'], $profile['cidade_publica'], $profile['estado_publico'], $profile['latitude_publica'], $profile['longitude_publica'], $profile['descricao_publica'], $profile['nacao_publica'], $profile['horarios_publicos'], $profile['whatsapp_publico'], $storedLogo['path'] ?? null]);
             $tenantId = (int) $this->centralConn->lastInsertId();
             $this->log(null, $tenantId, 'cadastro_publico_centro_recebido', 'tenants', $tenantId, 'Cadastro sem login aguardando análise global.');
             $this->centralConn->commit();
 
             $infoStmt = $tenantConn->prepare('INSERT INTO terreiro_info (nome, fundacao, nacao, babalorixa, yalorixa) VALUES (?, ?, ?, ?, ?)');
             $infoStmt->execute([$nomeTerreiro, $fundacao ?: null, $nacao ?: null, null, null]);
-            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, email_contato) VALUES (?, ?, ?, ?)');
-            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $contactEmail]);
+            $detailStmt = $tenantConn->prepare('INSERT INTO terreiro_detalhes (descricao, cidade, estado, whatsapp, email_contato, endereco_publico, numero_publico, bairro_publico, horarios_funcionamento, logo_publico) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $detailStmt->execute([$profile['descricao_publica'], $profile['cidade_publica'], $profile['estado_publico'], $profile['whatsapp_publico'], $contactEmail, $profile['endereco_publico'], $profile['numero_publico'], $profile['bairro_publico'], $profile['horarios_publicos'], $storedLogo['path'] ?? null]);
             return ['tenant_id' => $tenantId, 'slug' => $slug];
         } catch (Throwable $e) {
             if ($this->centralConn->inTransaction()) {
@@ -458,6 +469,7 @@ final class TenantManager
             if ($databaseCreated && $provisionerConn instanceof PDO) {
                 try { $provisionerConn->exec("DROP DATABASE IF EXISTS `$dbName`"); } catch (Throwable $cleanupError) { error_log('Falha ao limpar banco de cadastro público: ' . $cleanupError->getMessage()); }
             }
+            if ($storedLogo !== null) { LogoStorage::delete($storedLogo['path']); }
             error_log('Falha ao cadastrar centro sem login: ' . $e->getMessage());
             return ['error' => 'Não foi possível concluir o cadastro agora. Tente novamente mais tarde.'];
         }

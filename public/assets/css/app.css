@@ -98,6 +98,9 @@ textarea.form-control { min-height: 7.5rem; }
 .mt-directory-hero, .mt-profile-hero { color: #fff; background: radial-gradient(circle at 86% 12%, rgba(241,223,173,.28), transparent 18rem), linear-gradient(135deg, var(--mt-terra-escura), var(--mt-terra) 62%, #805638); box-shadow: 0 .45rem 1.2rem rgba(66, 38, 24, .16); }
 .mt-directory-hero .mt-eyebrow, .mt-profile-hero .mt-eyebrow { color: var(--mt-dourado-claro); }
 .mt-directory-card { position: relative; border-top: 4px solid var(--mt-verde); transition: transform .16s ease, box-shadow .16s ease; }
+.mt-directory-card-logo { width: 100%; height: 9rem; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: .7rem; background: linear-gradient(135deg, rgba(90,51,36,.08), rgba(47,106,87,.08)); }
+.mt-directory-card-logo img { width: 100%; height: 100%; object-fit: contain; }
+.mt-directory-card-logo-fallback { color: var(--mt-terra); font-size: 2.5rem; opacity: .72; }
 .mt-directory-card:hover { transform: translateY(-3px); box-shadow: 0 .7rem 1.45rem rgba(70,46,28,.13); }
 .mt-directory-card h3 a { color: var(--mt-terra); }
 .mt-directory-map { min-height: 22rem; overflow: hidden; }

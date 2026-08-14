@@ -37,6 +37,7 @@ $old = [
     'horarios_publicos' => trim((string) ($_POST['horarios_publicos'] ?? '')),
     'papel' => (string) ($_POST['papel'] ?? 'Colaborador'),
 ];
+$logoUpload = $_FILES['logo_publico'] ?? null;
 $manager = new TenantManager();
 $result = $manager->createTenantForUser(
     (int) $_SESSION['user_id'],
@@ -45,7 +46,8 @@ $result = $manager->createTenantForUser(
     $old['fundacao'] ?: null,
     $old['papel'],
     !empty($_POST['aceite_responsabilidade']),
-    $old
+    $old,
+    $logoUpload
 );
 if (isset($result['error'])) {
     return_to_create_tenant($result['error'], $old);

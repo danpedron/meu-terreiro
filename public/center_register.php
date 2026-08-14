@@ -26,6 +26,7 @@ $old = [
     'descricao_publica' => trim((string) ($_POST['descricao_publica'] ?? '')),
     'horarios_publicos' => trim((string) ($_POST['horarios_publicos'] ?? '')),
 ];
+$logoUpload = $_FILES['logo_publico'] ?? null;
 $manager = new TenantManager();
 $result = $manager->createPublicTenantSubmission(
     $old['responsavel_nome'],
@@ -34,7 +35,8 @@ $result = $manager->createPublicTenantSubmission(
     $old['nacao'],
     $old['fundacao'] ?: null,
     $old,
-    !empty($_POST['autoriza_cadastro'])
+    !empty($_POST['autoriza_cadastro']),
+    $logoUpload
 );
 if (isset($result['error'])) {
     $_SESSION['public_center_error'] = $result['error'];

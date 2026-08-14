@@ -44,6 +44,7 @@ $old = [
     'email_responsavel' => mb_strtolower(trim((string) ($_POST['email_responsavel'] ?? ''))),
 ];
 
+$logoUpload = $_FILES['logo_publico'] ?? null;
 $manager = new TenantManager();
 $result = $manager->createTenantForGlobalAdmin(
     $userId,
@@ -52,7 +53,8 @@ $result = $manager->createTenantForGlobalAdmin(
     $old['fundacao'] ?: null,
     !empty($_POST['aceite_responsabilidade']),
     $old,
-    $old['email_responsavel'] ?: null
+    $old['email_responsavel'] ?: null,
+    $logoUpload
 );
 if (isset($result['error'])) {
     return_to_global_tenant_create($result['error'], $old);

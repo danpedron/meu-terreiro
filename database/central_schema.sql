@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     horarios_publicos TEXT NULL,
     whatsapp_publico VARCHAR(20) NULL,
     email_publico VARCHAR(255) NULL,
+    logo_publico VARCHAR(255) NULL,
     aceita_consultas TINYINT(1) NOT NULL DEFAULT 0,
     aceita_solicitacoes_vinculo TINYINT(1) NOT NULL DEFAULT 1,
     dirigente_status ENUM('Sem dirigente','Pendente de verificação','Verificado') NOT NULL DEFAULT 'Sem dirigente',

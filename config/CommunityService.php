@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/db_config.php';
+require_once __DIR__ . '/LogoStorage.php';
 
 final class CommunityService
 {
@@ -57,7 +58,7 @@ final class CommunityService
             "SELECT id, slug, db_name, nome_exibicao, descricao_publica, nacao_publica, dirigente_publico, dirigente_status,
                     linha_presenca_publica, horarios_publicos, whatsapp_publico, email_publico, aceita_consultas,
                     aceita_solicitacoes_vinculo, localizacao_publica, endereco_publico, bairro_publico, cidade_publica,
-                    estado_publico, latitude_publica, longitude_publica, mostrar_no_mapa
+                    estado_publico, latitude_publica, longitude_publica, mostrar_no_mapa, logo_publico
              FROM tenants
              WHERE slug = ? AND status = 'Ativo' AND listar_publicamente = 1
              LIMIT 1"
@@ -113,7 +114,7 @@ final class CommunityService
 
         $sql = "SELECT t.id, t.slug, t.nome_exibicao, t.descricao_publica, t.nacao_publica, t.dirigente_publico,
                        t.linha_presenca_publica, t.horarios_publicos, t.localizacao_publica, t.bairro_publico,
-                       t.cidade_publica, t.estado_publico, t.latitude_publica, t.longitude_publica, t.mostrar_no_mapa,
+                       t.cidade_publica, t.estado_publico, t.latitude_publica, t.longitude_publica, t.mostrar_no_mapa, t.logo_publico,
                        $selectDistance
                 FROM tenants t
                 WHERE $where";

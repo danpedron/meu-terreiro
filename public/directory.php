@@ -129,7 +129,7 @@ $baseSearchParams = [
             </div></div>
         <?php else: ?>
             <div class="row g-3">
-            <?php foreach ($results as $item): ?><div class="col-12 col-md-6 col-xl-4"><article class="card h-100 border-0 shadow-sm mt-directory-card"><div class="card-body p-4"><span class="badge text-bg-light mb-2"><?php echo e($item['cidade_publica'] ?: 'Localidade compartilhada pela casa'); ?><?php echo $item['estado_publico'] ? ', ' . e($item['estado_publico']) : ''; ?></span><h3 class="h4"><a class="stretched-link text-decoration-none" href="terreiro.php?c=<?php echo rawurlencode($item['slug']); ?>"><?php echo e($item['nome_exibicao']); ?></a></h3><?php if ($item['nacao_publica']): ?><p class="mb-2"><i class="fa-solid fa-seedling text-success me-2"></i><?php echo e($item['nacao_publica']); ?></p><?php endif; ?><?php if ($item['dirigente_publico']): ?><p class="small text-muted mb-2">Dirigência informada: <?php echo e($item['dirigente_publico']); ?></p><?php endif; ?><?php if ($item['horarios_publicos']): ?><p class="small mb-2"><i class="fa-regular fa-calendar me-2"></i><?php echo e(mb_strimwidth($item['horarios_publicos'], 0, 110, '…')); ?></p><?php endif; ?><?php if ($item['distancia_km'] !== null): ?><p class="fw-semibold mb-0"><i class="fa-solid fa-route me-2"></i><?php echo number_format((float) $item['distancia_km'], 1, ',', '.'); ?> km de distância aproximada</p><?php endif; ?></div></article></div><?php endforeach; ?>
+            <?php foreach ($results as $item): $logoUrl = tenant_logo_url($item['logo_publico'] ?? null); ?><div class="col-12 col-md-6 col-xl-4"><article class="card h-100 border-0 shadow-sm mt-directory-card"><div class="card-body p-4"><div class="mt-directory-card-logo mb-3"><?php if ($logoUrl): ?><img src="<?php echo e($logoUrl); ?>" alt="Logotipo de <?php echo e($item['nome_exibicao']); ?>" loading="lazy"><?php else: ?><i class="fa-solid fa-house-chimney mt-directory-card-logo-fallback" aria-hidden="true"></i><span class="visually-hidden">Sem logotipo informado</span><?php endif; ?></div><span class="badge text-bg-light mb-2"><?php echo e($item['cidade_publica'] ?: 'Localidade compartilhada pela casa'); ?><?php echo $item['estado_publico'] ? ', ' . e($item['estado_publico']) : ''; ?></span><h3 class="h4"><a class="stretched-link text-decoration-none" href="terreiro.php?c=<?php echo rawurlencode($item['slug']); ?>"><?php echo e($item['nome_exibicao']); ?></a></h3><?php if ($item['nacao_publica']): ?><p class="mb-2"><i class="fa-solid fa-seedling text-success me-2"></i><?php echo e($item['nacao_publica']); ?></p><?php endif; ?><?php if ($item['dirigente_publico']): ?><p class="small text-muted mb-2">Dirigência informada: <?php echo e($item['dirigente_publico']); ?></p><?php endif; ?><?php if ($item['horarios_publicos']): ?><p class="small mb-2"><i class="fa-regular fa-calendar me-2"></i><?php echo e(mb_strimwidth($item['horarios_publicos'], 0, 110, '…')); ?></p><?php endif; ?><?php if ($item['distancia_km'] !== null): ?><p class="fw-semibold mb-0"><i class="fa-solid fa-route me-2"></i><?php echo number_format((float) $item['distancia_km'], 1, ',', '.'); ?> km de distância aproximada</p><?php endif; ?></div></article></div><?php endforeach; ?>
             </div>
             <?php if (!$results): ?><div class="alert alert-light border mt-3">Nenhuma casa pública foi encontrada com estes critérios. Você pode buscar por cidade, ampliar o raio ou <a href="index.php?p=cadastrar-centro">cadastrar um centro para análise</a>.</div><?php endif; ?>
         <?php endif; ?>
@@ -157,19 +157,29 @@ useLocation?.addEventListener('click', () => {
 });
 <?php if ($view === 'mapa' && $markers): ?>
 const markers = <?php echo json_encode($markers, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
-const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
-const initialCenter = markers.length ? [markers[0].lat, markers[0].lng] : [-14.235, -51.9253];
-const map = L.map('directoryMap', {scrollWheelZoom: false}).setView(initialCenter, markers.length === 1 ? 13 : 5);
-const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).addTo(map);
-const bounds = [];
-markers.forEach((marker) => { L.marker([marker.lat, marker.lng]).addTo(map).bindPopup('<a href="' + marker.url + '">' + escapeHtml(marker.name) + '</a>' + (marker.city ? '<br><span class="small">' + escapeHtml(marker.city) + '</span>' : '')); bounds.push([marker.lat, marker.lng]); });
-<?php if ($hasCoordinates): ?>
-L.circleMarker([<?php echo (float) $lat; ?>, <?php echo (float) $lng; ?>], {radius: 7, color: '#1f5b4b', fillColor: '#1f5b4b', fillOpacity: 0.8}).addTo(map).bindTooltip('Sua busca');
-bounds.push([<?php echo (float) $lat; ?>, <?php echo (float) $lng; ?>]);
-<?php endif; ?>
-if (bounds.length > 1) { map.fitBounds(bounds, {padding: [32, 32], maxZoom: 14}); }
-window.requestAnimationFrame(() => map.invalidateSize());
-tiles.on('tileerror', () => { const status = document.getElementById('mapStatus'); if (status) { status.textContent = 'Algumas imagens do mapa não foram carregadas. Você ainda pode abrir os perfis pelos marcadores ou escolher Lista.'; } });
+const mapStatus = document.getElementById('mapStatus');
+if (!window.L) {
+    if (mapStatus) { mapStatus.textContent = 'O mapa não pôde ser carregado neste navegador ou rede. Escolha Lista ou Cartões para consultar as casas.'; }
+} else {
+    try {
+        const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
+        const initialCenter = markers.length ? [markers[0].lat, markers[0].lng] : [-14.235, -51.9253];
+        const map = L.map('directoryMap', {scrollWheelZoom: false}).setView(initialCenter, markers.length === 1 ? 13 : 5);
+        const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'}).addTo(map);
+        const bounds = [];
+        markers.forEach((marker) => { L.marker([marker.lat, marker.lng]).addTo(map).bindPopup('<a href="' + marker.url + '">' + escapeHtml(marker.name) + '</a>' + (marker.city ? '<br><span class="small">' + escapeHtml(marker.city) + '</span>' : '')); bounds.push([marker.lat, marker.lng]); });
+        <?php if ($hasCoordinates): ?>
+        L.circleMarker([<?php echo (float) $lat; ?>, <?php echo (float) $lng; ?>], {radius: 7, color: '#1f5b4b', fillColor: '#1f5b4b', fillOpacity: 0.8}).addTo(map).bindTooltip('Sua busca');
+        bounds.push([<?php echo (float) $lat; ?>, <?php echo (float) $lng; ?>]);
+        <?php endif; ?>
+        if (bounds.length > 1) { map.fitBounds(bounds, {padding: [32, 32], maxZoom: 14}); }
+        window.requestAnimationFrame(() => map.invalidateSize());
+        tiles.on('tileerror', () => { if (mapStatus) { mapStatus.textContent = 'As imagens do mapa não puderam ser carregadas nesta rede. Você ainda pode abrir os perfis pelos marcadores ou escolher Lista.'; } });
+    } catch (error) {
+        console.warn('Falha ao inicializar o mapa público.', error);
+        if (mapStatus) { mapStatus.textContent = 'O mapa não pôde ser inicializado neste navegador. Escolha Lista ou Cartões para consultar as casas.'; }
+    }
+}
 <?php endif; ?>
 </script>
 </body></html>
